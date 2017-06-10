@@ -2,7 +2,7 @@ package mdparse
 
 import org.scalatest.{FlatSpec, FunSpec, Matchers}
 import fastparse.all._
-import mdparse.md.{Break, Header, Link, Paragraph, RawText}
+import mdparse.md._
 import org.scalatest.matchers.{MatchResult, Matcher}
 
 class MdParserSpec extends FunSpec with Matchers {
@@ -12,7 +12,7 @@ class MdParserSpec extends FunSpec with Matchers {
   describe("header") {
 
     it("should parse") {
-      HeaderP.parse("### Hello ") should parseTo(Header(3, "Hello"))
+      header.parse("### Hello ") should parseTo(Header(3, "Hello"))
     }
 
   }
@@ -20,19 +20,19 @@ class MdParserSpec extends FunSpec with Matchers {
   describe("Link") {
 
     it("should parse") {
-      LinkP.parse("<hello>") should parseTo(Link("hello"))
-      LinkP.parse("[foo](/bar)") should parseTo(Link("foo", "/bar"))
+      link.parse("<hello>") should parseTo(Link("hello"))
+      link.parse("[foo](/bar)") should parseTo(Link("foo", "/bar"))
     }
   }
 
   describe("th break") {
 
     it("should parse") {
-      BreakP.parse("***") should parseTo(Break)
-      BreakP.parse("******") should parseTo(Break)
-      BreakP.parse("---") should parseTo(Break)
-      BreakP.parse("___") should parseTo(Break)
-      BreakP.parse("   ___") should parseTo(Break)
+      break.parse("***") should parseTo(Break)
+      break.parse("******") should parseTo(Break)
+      break.parse("---") should parseTo(Break)
+      break.parse("___") should parseTo(Break)
+      break.parse("   ___") should parseTo(Break)
     }
   }
 
@@ -47,7 +47,7 @@ class MdParserSpec extends FunSpec with Matchers {
       val expected = Paragraph.withItems(
         RawText("first second and last")
       )
-      ParagraphP.parse(p) should parseTo(expected)
+      paragraph.parse(p) should parseTo(expected)
     }
 
     it("with link") {
@@ -60,12 +60,23 @@ class MdParserSpec extends FunSpec with Matchers {
         Link("foo", "/bar"),
         RawText(" second")
       )
-      ParagraphP.parse(p) should parseTo(expected)
+      paragraph.parse(p) should parseTo(expected)
     }
 
-    it("with text bold") {
-      val p = "abc **yoyo** asd"
-      println(ParagraphP.parse(p))
+    it("bold text") {
+      val p1 = "**bold text**"
+      val p2 = "__bold text__"
+
+      val expected = Paragraph.withItems(BoldText("bold text"))
+
+      paragraph.parse(p1) should parseTo(expected)
+      paragraph.parse(p2) should parseTo(expected)
+    }
+
+    it("italic") {
+      val p = "*italic text*"
+      val expected = Paragraph.withItems(Italic("italic text"))
+      paragraph.parse(p) should parseTo(expected)
     }
   }
 
@@ -87,11 +98,6 @@ class MdParserSpec extends FunSpec with Matchers {
       println(r)
     }
 
-    it("asdasd") {
-      val text = "---- asdsadasd"
-      val r = markdown.parse(text)
-      println(r)
-    }
   }
 
   class ParserMatcher[A](a: A) extends Matcher[Parsed[A]] {

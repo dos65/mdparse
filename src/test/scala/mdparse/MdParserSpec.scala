@@ -19,10 +19,10 @@ class MdParserSpec extends FunSpec with Matchers {
 
   describe("Link") {
 
-    it("should parse") {
-      link.parse("<hello>") should parseTo(Link("hello"))
-      link.parse("[foo](/bar)") should parseTo(Link("foo", "/bar"))
-    }
+//    it("should parse") {
+//      link.parse("<hello>") should parseTo(Link("hello"))
+//      link.parse("[foo](/bar)") should parseTo(Link("foo", "/bar"))
+//    }
   }
 
   describe("th break") {
@@ -45,7 +45,7 @@ class MdParserSpec extends FunSpec with Matchers {
           |and last""".stripMargin
 
       val expected = Paragraph.withItems(
-        RawText("first second and last")
+        Common("first second and last")
       )
       paragraph.parse(p) should parseTo(expected)
     }
@@ -56,9 +56,9 @@ class MdParserSpec extends FunSpec with Matchers {
           |second""".stripMargin
 
       val expected = Paragraph.withItems(
-        RawText("first "),
+        Common("first "),
         Link("foo", "/bar"),
-        RawText(" second")
+        Common(" second")
       )
       paragraph.parse(p) should parseTo(expected)
     }
@@ -67,17 +67,96 @@ class MdParserSpec extends FunSpec with Matchers {
       val p1 = "**bold text**"
       val p2 = "__bold text__"
 
-      val expected = Paragraph.withItems(BoldText("bold text"))
+      val expected = Strong(Seq(Common("bold text")))
 
-      paragraph.parse(p1) should parseTo(expected)
-      paragraph.parse(p2) should parseTo(expected)
+      TextItemsParser.strong.parse(p1) should parseTo(expected)
+      TextItemsParser.strong.parse(p2) should parseTo(expected)
     }
 
     it("italic") {
       val p = "*italic text*"
-      val expected = Paragraph.withItems(Italic("italic text"))
-      paragraph.parse(p) should parseTo(expected)
+      val expected = Italic(Seq(Common("italic text")))
+      TextItemsParser.italic.parse(p) should parseTo(expected)
     }
+  }
+
+  describe("text") {
+
+    it("should parse any text") {
+      val p = "11sdd *three* one two **fourth [title](link)**"
+      val expected = Text(Seq(
+        Common("11sdd "),
+        Italic(Seq(Common("three"))),
+        Common(" one two "),
+        Strong(Seq(
+          Common("fourth "),
+          Link("title", "link")
+        ))
+      ))
+      val r = TextItemsParser.text.parse(p)
+      println(r)
+      r should parseTo(expected)
+    }
+  }
+
+  describe("p2") {
+
+    it("basic example") {
+      val p = "hello dasd **sadasd** \n asdsadsadrewr sa asr "
+      val r = MdParser.paragraph.parse(p)
+      println(r)
+      val expected = Paragraph(Seq(
+        Text(Seq( Common("hello dasd "), Strong(Seq( Common("sadasd") )), Common(" ") )),
+        Text(Seq( Common(" asdsadsadrewr sa asr ") ))
+      ))
+      r should parseTo(expected)
+    }
+  }
+
+  describe("list") {
+
+    it("unordered") {
+      def mkString(s: String): String = {
+        s"""$s first
+           |$s second
+           |$s third
+         """.stripMargin
+      }
+      val expected = UnorderedList(Seq(
+        ListItem(Seq(Common("first"))),
+        ListItem(Seq(Common("second"))),
+        ListItem(Seq(Common("third")))
+      ))
+      val x = list.parse(mkString("*"))
+      list.parse(mkString("*")) should parseTo(expected)
+      list.parse(mkString("-")) should parseTo(expected)
+      list.parse(mkString("+")) should parseTo(expected)
+    }
+
+    it("ordered") {
+      val p =
+        """1. first
+          |2. second
+          |3. third
+         """.stripMargin
+
+      val expected = OrderedList(Seq(
+        ListItem(Seq(Common("first"))),
+        ListItem(Seq(Common("second"))),
+        ListItem(Seq(Common("third")))
+      ))
+
+      list.parse(p) should parseTo(expected)
+    }
+  }
+
+  describe("text") {
+
+//    it("asdasd") {
+//      val p = "**sadasd [asdasd](link**) *italic <hello>* **"
+//      println(strong.parse(p))
+//
+//    }
   }
 
   describe("complex parsing") {
@@ -100,10 +179,10 @@ class MdParserSpec extends FunSpec with Matchers {
 
   }
 
-  class ParserMatcher[A](a: A) extends Matcher[Parsed[A]] {
-    override def apply(left: Parsed[A]): MatchResult = {
+  class ParserMatcher(a: Any) extends Matcher[Parsed[_]] {
+    override def apply(left: Parsed[_]): MatchResult = {
       val result = left match {
-        case s: Parsed.Success[A] => s.value == a
+        case s: Parsed.Success[_] => s.value == a
         case f: Parsed.Failure => false
       }
       MatchResult(
@@ -114,6 +193,6 @@ class MdParserSpec extends FunSpec with Matchers {
     }
   }
 
-  def parseTo[A](a: A):ParserMatcher[A] = new ParserMatcher[A](a)
+  def parseTo[A](a: A): ParserMatcher = new ParserMatcher(a)
 
 }

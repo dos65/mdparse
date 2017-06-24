@@ -15,12 +15,21 @@ object md {
     def withItems(items: MdItem*): Paragraph = Paragraph(items)
   }
 
-  case class Link(text: String, destination: String) extends MdLeaf
+  sealed trait TextItem extends MdLeaf
+
+  case class Link(text: String, destination: String) extends TextItem
   object Link {
     def apply(link: String): Link = new Link(link, link)
   }
-  case class RawText(s: String) extends MdLeaf
-  case class BoldText(s: String) extends MdLeaf
-  case class Italic(s: String) extends MdLeaf
 
+  case class Common(s: String) extends TextItem
+  case class Strong(elems: Seq[TextItem]) extends TextItem
+  case class Italic(elems: Seq[TextItem]) extends TextItem
+
+  case class Text(items: Seq[TextItem]) extends MdLeaf
+
+  case class ListItem(items: Seq[MdItem]) extends MdNode
+
+  case class UnorderedList(items: Seq[ListItem]) extends MdNode
+  case class OrderedList(items: Seq[ListItem]) extends MdNode
 }

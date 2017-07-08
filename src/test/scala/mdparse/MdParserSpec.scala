@@ -103,12 +103,11 @@ class MdParserSpec extends FunSpec with Matchers {
 
     it("basic example") {
       val p = "hello dasd **sadasd** \n asdsadsadrewr sa asr "
-      val r = MdParser.paragraph.parse(p)
-      println(r)
       val expected = Paragraph(Seq(
         Text(Seq( Common("hello dasd "), Strong(Seq( Common("sadasd") )), Common(" ") )),
         Text(Seq( Common(" asdsadsadrewr sa asr ") ))
       ))
+      val r = MdParser.paragraph.parse(p)
       r should parseTo(expected)
     }
   }
@@ -119,15 +118,18 @@ class MdParserSpec extends FunSpec with Matchers {
       def mkString(s: String): String = {
         s"""$s first
            |$s second
-           |$s third
-         """.stripMargin
+           |    $s inner-1
+           |    dsfdsfdsfsd
+           |    dsfsdfsdfsdfs
+           |    $s inner-2
+           |$s third""".stripMargin
       }
+      println(mkString("-"))
       val expected = UnorderedList(Seq(
-        ListItem(Seq(Common("first"))),
-        ListItem(Seq(Common("second"))),
-        ListItem(Seq(Common("third")))
+        ListItem(Seq(Text(Seq(Common("first"))))),
+        ListItem(Seq(Text(Seq(Common("second"))))),
+        ListItem(Seq(Text(Seq(Common("third")))))
       ))
-      val x = list.parse(mkString("*"))
       list.parse(mkString("*")) should parseTo(expected)
       list.parse(mkString("-")) should parseTo(expected)
       list.parse(mkString("+")) should parseTo(expected)
@@ -141,22 +143,13 @@ class MdParserSpec extends FunSpec with Matchers {
          """.stripMargin
 
       val expected = OrderedList(Seq(
-        ListItem(Seq(Common("first"))),
-        ListItem(Seq(Common("second"))),
-        ListItem(Seq(Common("third")))
+        ListItem(Seq(Text(Seq(Common("first"))))),
+        ListItem(Seq(Text(Seq(Common("second"))))),
+        ListItem(Seq(Text(Seq(Common("third")))))
       ))
 
       list.parse(p) should parseTo(expected)
     }
-  }
-
-  describe("text") {
-
-//    it("asdasd") {
-//      val p = "**sadasd [asdasd](link**) *italic <hello>* **"
-//      println(strong.parse(p))
-//
-//    }
   }
 
   describe("complex parsing") {

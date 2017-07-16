@@ -1,16 +1,9 @@
 package mdparse
 
 import fastparse.all._
-import fastparse.core.Logger._
-import fastparse.noApi
-import fastparse.utils.ReprOps
 import mdparse.md._
 
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
-
-
-trait MdParser extends Basic{
+trait MdParser extends Basic {
 
   val header = {
     val sharps = P ( "#".rep(min = 1, max = 6).! ).map(_.length)
@@ -38,39 +31,6 @@ trait MdParser extends Basic{
 
   val list = {
 
-    def itemStart(prefix: String, level: Int): P0 = {
-      val p = if (level > 0) {
-        val spaces = space.rep(exactly = level * 4)
-        P(spaces ~ prefix)
-      } else {
-        P(prefix)
-      }
-
-      p ~ space
-    }
-
-//    def inner(head: md.Text, prefix: String, level: Int): P[ListItem] = {
-//      val notNextItem = !(itemStart(prefix, level) | break )
-//      val content = P(notNextItem ~ TextItemsParser.text ~ lnOrEnd).rep(1)
-//      val inner = mkUnordered(prefix, level + 1)
-//      (inner | content).rep(1).?.map(data => {
-//        val casted = data.asInstanceOf[Option[Seq[MdItem]]]
-//        ListItem(head +: casted.getOrElse(Seq.empty))
-//      })
-//    }
-
-//    def mkUnordered(prefix: String, level: Int): P[UnorderedList] = {
-//      val headParser = if (level > 0) {
-//        val spaces = space.rep(exactly = level * 4)
-//        P(spaces ~ prefix ~ space ~ TextItemsParser.text ~/ lnOrEnd)
-//      } else {
-//        P(prefix ~ space ~ TextItemsParser.text ~/ lnOrEnd)
-//      }
-//      headParser.flatMap(head => inner(head, prefix, level))
-//        .rep(1)
-//        .map(items => UnorderedList(items))
-//    }
-
     case class ListPrefix[T](sym: P0, f: Seq[ListItem] => T) {
 
       def parser(level: Int): P0 = {
@@ -96,16 +56,14 @@ trait MdParser extends Basic{
       prefix: ListPrefix[_],
       level: Int): P[ListItem] = {
 
-      val maybeNexts = for ( i <- 0 to level ) yield prefix.parser(i)
+      val maybeNexts = for ( i <- 0 to level + 1 ) yield prefix.parser(i)
       val catchItems = maybeNexts.reduceLeft(_ | _)
 
       val notNextItem = !(catchItems | break )
       val content = P(notNextItem ~ TextItemsParser.textTrimmed ~ lnOrEnd)
 
       val inner = mkLists(level + 1)
-      (inner | content).rep(1).?.map(data => {
-        ListItem(head +: data.getOrElse(Seq.empty))
-      })
+      (content.rep(0) ~ inner.rep(0)).map({case (content: Seq[md.Text],  inner: Seq[MdList]) => ListItem(head +: (content ++ inner)) })
     }
 
     def mkList[T](prefix: ListPrefix[T], level: Int): P[T] = {

@@ -121,6 +121,8 @@ class MdParserSpec extends FunSpec with Matchers {
            |    $s inner-1
            |    dsfdsfdsfsd
            |    dsfsdfsdfsdfs
+           |        $s third-level-1
+           |        $s third-level-2
            |    $s inner-2
            |$s third""".stripMargin
       }
@@ -132,7 +134,11 @@ class MdParserSpec extends FunSpec with Matchers {
             ListItem(Seq(
               Text(Seq(Common("inner-1"))),
               Text(Seq(Common("dsfdsfdsfsd"))),
-              Text(Seq(Common("dsfsdfsdfsdfs")))
+              Text(Seq(Common("dsfsdfsdfsdfs"))),
+              UnorderedList(Seq(
+                ListItem(Seq(Text(Seq(Common("third-level-1"))))),
+                ListItem(Seq(Text(Seq(Common("third-level-2")))))
+              ))
             )),
             ListItem(Seq(
               Text(Seq(Common("inner-2")))

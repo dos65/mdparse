@@ -49,50 +49,75 @@ trait MdParser extends Basic{
       p ~ space
     }
 
-    def inner(head: md.Text, prefix: String, level: Int): P[ListItem] = {
-      val notNextItem = !(itemStart(prefix, level) | break )
-      val content = P(notNextItem ~ TextItemsParser.text ~ lnOrEnd).rep(1)
-      val inner = mkUnordered(prefix, level + 1)
+//    def inner(head: md.Text, prefix: String, level: Int): P[ListItem] = {
+//      val notNextItem = !(itemStart(prefix, level) | break )
+//      val content = P(notNextItem ~ TextItemsParser.text ~ lnOrEnd).rep(1)
+//      val inner = mkUnordered(prefix, level + 1)
+//      (inner | content).rep(1).?.map(data => {
+//        val casted = data.asInstanceOf[Option[Seq[MdItem]]]
+//        ListItem(head +: casted.getOrElse(Seq.empty))
+//      })
+//    }
+
+//    def mkUnordered(prefix: String, level: Int): P[UnorderedList] = {
+//      val headParser = if (level > 0) {
+//        val spaces = space.rep(exactly = level * 4)
+//        P(spaces ~ prefix ~ space ~ TextItemsParser.text ~/ lnOrEnd)
+//      } else {
+//        P(prefix ~ space ~ TextItemsParser.text ~/ lnOrEnd)
+//      }
+//      headParser.flatMap(head => inner(head, prefix, level))
+//        .rep(1)
+//        .map(items => UnorderedList(items))
+//    }
+
+    case class ListPrefix[T](sym: P0, f: Seq[ListItem] => T) {
+
+      def parser(level: Int): P0 = {
+        if (level > 0) {
+          val spaces = space.rep(exactly = level * 4)
+          spaces ~ sym
+        } else {
+          sym
+        }
+      }
+
+    }
+
+    val prefixes = Seq(
+      ListPrefix(P("*"), UnorderedList.apply),
+      ListPrefix(P("-"), UnorderedList.apply),
+      ListPrefix(P("+"), UnorderedList.apply),
+      ListPrefix(P(CharIn('0' to '9').rep(1) ~ "."), OrderedList.apply)
+    )
+
+    def listItem(
+      head: md.Text,
+      prefix: ListPrefix[_],
+      level: Int): P[ListItem] = {
+
+      val maybeNexts = for ( i <- 0 to level ) yield prefix.parser(i)
+      val catchItems = maybeNexts.reduceLeft(_ | _)
+
+      val notNextItem = !(catchItems | break )
+      val content = P(notNextItem ~ TextItemsParser.textTrimmed ~ lnOrEnd)
+
+      val inner = mkLists(level + 1)
       (inner | content).rep(1).?.map(data => {
-        val casted = data.asInstanceOf[Option[Seq[MdItem]]]
-        ListItem(head +: casted.getOrElse(Seq.empty))
+        ListItem(head +: data.getOrElse(Seq.empty))
       })
     }
 
-    def mkUnordered(prefix: String, level: Int): P[UnorderedList] = {
-      val headParser = if (level > 0) {
-        val spaces = space.rep(exactly = level * 4)
-        P(spaces ~ prefix ~ space ~ TextItemsParser.text ~/ lnOrEnd)
-      } else {
-        P(prefix ~ space ~ TextItemsParser.text ~/ lnOrEnd)
-      }
-      headParser.flatMap(head => inner(head, prefix, level))
+    def mkList[T](prefix: ListPrefix[T], level: Int): P[T] = {
+      val headParser = P(prefix.parser(level) ~ space ~ TextItemsParser.textTrimmed ~/ lnOrEnd)
+      headParser.flatMap(head => listItem(head, prefix, level))
         .rep(1)
-        .map(items => UnorderedList(items))
+        .map(items => prefix.f(items))
     }
 
-    def mkList(prefix: String, level: Int): P[UnorderedList] = {
-      val headParser = if (level > 0) {
-        val spaces = space.rep(exactly = level * 4)
-        P(spaces ~ prefix ~ space ~ TextItemsParser.text ~/ lnOrEnd)
-      } else {
-        P(prefix ~ space ~ TextItemsParser.text ~/ lnOrEnd)
-      }
-      headParser.flatMap(head => inner(head, prefix, level))
-        .rep(1)
-        .map(items => UnorderedList(items))
-    }
+    def mkLists(level: Int): P[MdList] = prefixes.map(p => mkList(p, level)).reduceLeft(_ | _)
 
-    val ordered = {
-      val prefix = P( CharIn('0' to '9').rep(1) ~ "." )
-      P(prefix ~ space ~ TextItemsParser.text ~ lnOrEnd)
-        .map(text => ListItem(Seq(text)))
-        .rep(1)
-        .map(items => OrderedList(items))
-    }
-
-    val unordered = Seq("-", "+", "*").map(s => mkUnordered(s, 0)).reduce(_ | _)
-    P(unordered | ordered)
+    mkLists(0)
   }
 
   val markdown: P[Seq[MdItem]] = P((header | break | blankLine | paragraph ).rep ~ End)

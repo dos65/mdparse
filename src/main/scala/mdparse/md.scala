@@ -1,5 +1,6 @@
 package mdparse
 
+
 object md {
 
   sealed trait MdItem extends Product with Serializable
@@ -30,6 +31,8 @@ object md {
 
   case class ListItem(items: Seq[MdItem]) extends MdNode
 
-  case class UnorderedList(items: Seq[ListItem]) extends MdNode
-  case class OrderedList(items: Seq[ListItem]) extends MdNode
+  sealed trait MdList extends MdNode
+  case class UnorderedList(items: Seq[ListItem]) extends MdList
+  case class OrderedList(items: Seq[ListItem]) extends MdList
+
 }

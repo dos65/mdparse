@@ -124,12 +124,24 @@ class MdParserSpec extends FunSpec with Matchers {
            |    $s inner-2
            |$s third""".stripMargin
       }
-      println(mkString("-"))
       val expected = UnorderedList(Seq(
         ListItem(Seq(Text(Seq(Common("first"))))),
-        ListItem(Seq(Text(Seq(Common("second"))))),
+        ListItem(Seq(
+          Text(Seq(Common("second")) ),
+          UnorderedList(Seq(
+            ListItem(Seq(
+              Text(Seq(Common("inner-1"))),
+              Text(Seq(Common("dsfdsfdsfsd"))),
+              Text(Seq(Common("dsfsdfsdfsdfs")))
+            )),
+            ListItem(Seq(
+              Text(Seq(Common("inner-2")))
+            ))
+          ))
+        )),
         ListItem(Seq(Text(Seq(Common("third")))))
       ))
+
       list.parse(mkString("*")) should parseTo(expected)
       list.parse(mkString("-")) should parseTo(expected)
       list.parse(mkString("+")) should parseTo(expected)

@@ -3,6 +3,9 @@ package mdparse
 import fastparse.all._
 import mdparse.md._
 
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+
 trait TextItemsParser extends Basic {
 
   val AnyTextChar = P(!(ln | tab) ~ AnyChar)
@@ -60,23 +63,51 @@ trait TextItemsParser extends Basic {
       })
   }
 
-  private def foldChars(elems: Seq[Any]): Seq[TextItem] = {
+  val textTrimmed  = {
+    P(" ".rep ~ link | italic | strong | AnyTextChar.!).rep(1)
+      .map(raw => {
+        val items = foldChars(raw)
+        if (items.size == 1) {
+          items(items.size - 1) = items.last match {
+            case Common(s) => Common(s.replaceAll("^\\s+", "").replaceAll("\\s+$", ""))
+            case x => x
+          }
 
-    def toBuilders(seq: Seq[Any]): Seq[Any] = seq.foldLeft(List.empty[Any]) {
-      case (x, c: String) => x.lastOption match {
-        case Some(b :StringBuilder) =>
-          b.append(c)
-          x
-        case _ =>
-          val b = new StringBuilder
-          b.append(c)
-          x :+ b
+        } else {
+          items(0) = items.head match {
+            case Common(s) => Common(s.replaceAll("^\\s+", ""))
+            case x => x
+          }
+          items(items.size - 1) = items.last match {
+            case Common(s) => Common(s.replaceAll("\\s+$", ""))
+            case x => x
+          }
+        }
+        Text(items)
+      })
+  }
+
+
+  private def foldChars(elems: Seq[Any]): mutable.Buffer[TextItem] = {
+
+    def toBuilders(seq: mutable.Buffer[Any]): mutable.Buffer[Any] = {
+      val init = new mutable.ArrayBuffer[Any](seq.size)
+      seq.foldLeft(init) {
+        case (x, c: String) => x.lastOption match {
+          case Some(b: StringBuilder) =>
+            b.append(c)
+            x
+          case _ =>
+            val b = new StringBuilder
+            b.append(c)
+            x :+ b
+        }
+        case (x, ele) =>
+          x :+ ele
       }
-      case (x, ele) =>
-        x :+ ele
     }
 
-    toBuilders(elems).map({
+    toBuilders(elems.asInstanceOf[ArrayBuffer[Any]]).map({
       case builder: StringBuilder =>
         val s = builder.mkString
         Common(s)

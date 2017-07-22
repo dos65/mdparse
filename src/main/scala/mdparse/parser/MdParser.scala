@@ -1,4 +1,4 @@
-package mdparse
+package mdparse.parser
 
 import fastparse.all._
 import mdparse.md._
@@ -14,7 +14,7 @@ trait MdParser extends Basic {
     P( sharps ~ space ~/ text ).map({case (level, text) => Header(level, text)})
   }
 
-  val break = {
+  val thBreak = {
     val spaces = P( space.rep(max = 3) )
 
     val stars = P( "*".rep(min = 3) )
@@ -22,7 +22,7 @@ trait MdParser extends Basic {
     val dashes = P( "-".rep(min = 3) )
 
     val symbolic = P((dashes | stars | underscores) ~ space.rep ~ lnOrEnd)
-    P(spaces.? ~ symbolic).map(_ => Break)
+    P(spaces.? ~ symbolic).map(_ => ThBreak)
   }
 
   val paragraph = {
@@ -52,18 +52,18 @@ trait MdParser extends Basic {
     )
 
     def listItem(
-      head: md.Text,
+      head: Text,
       prefix: ListPrefix[_],
       level: Int): P[ListItem] = {
 
       val maybeNexts = for ( i <- 0 to level + 1 ) yield prefix.parser(i)
       val catchItems = maybeNexts.reduceLeft(_ | _)
 
-      val notNextItem = !(catchItems | break )
+      val notNextItem = !(catchItems | thBreak )
       val content = P(notNextItem ~ TextItemsParser.textTrimmed ~ lnOrEnd)
 
       val inner = mkLists(level + 1)
-      (content.rep(0) ~ inner.rep(0)).map({case (content: Seq[md.Text],  inner: Seq[MdList]) => ListItem(head +: (content ++ inner)) })
+      (content.rep(0) ~ inner.rep(0)).map({case (content: Seq[Text],  inner: Seq[MdList]) => ListItem(head +: (content ++ inner)) })
     }
 
     def mkList[T](prefix: ListPrefix[T], level: Int): P[T] = {
@@ -78,8 +78,13 @@ trait MdParser extends Basic {
     mkLists(0)
   }
 
-  val markdown: P[Seq[MdItem]] = P((header | break | blankLine | paragraph ).rep ~ End)
-    .map(_.collect({case b: MdItem => b}))
+  val markdown: P[Markdown] = {
+    val items = header | thBreak | blankLine | list | paragraph
+    P(items.rep ~ End).map(all => {
+      val mdItems = all.collect({case b: MdItem => b})
+      Markdown(mdItems)
+    })
+  }
 
 }
 

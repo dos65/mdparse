@@ -9,7 +9,7 @@ object md {
   sealed trait MdNode extends MdItem
 
   case class Header(level: Int, text: String) extends MdLeaf
-  case object Break extends MdLeaf
+  case object ThBreak extends MdLeaf
 
   case class Paragraph(items: Seq[MdItem]) extends MdItem
   object Paragraph {
@@ -34,5 +34,7 @@ object md {
   sealed trait MdList extends MdNode
   case class UnorderedList(items: Seq[ListItem]) extends MdList
   case class OrderedList(items: Seq[ListItem]) extends MdList
+
+  case class Markdown(items: Seq[MdItem])
 
 }

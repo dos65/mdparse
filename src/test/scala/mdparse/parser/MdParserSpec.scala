@@ -1,9 +1,10 @@
-package mdparse
+package mdparse.parser
 
-import org.scalatest.{FlatSpec, FunSpec, Matchers}
 import fastparse.all._
+import mdparse.md
 import mdparse.md._
 import org.scalatest.matchers.{MatchResult, Matcher}
+import org.scalatest.{FunSpec, Matchers}
 
 class MdParserSpec extends FunSpec with Matchers {
 
@@ -19,20 +20,20 @@ class MdParserSpec extends FunSpec with Matchers {
 
   describe("Link") {
 
-//    it("should parse") {
-//      link.parse("<hello>") should parseTo(Link("hello"))
-//      link.parse("[foo](/bar)") should parseTo(Link("foo", "/bar"))
-//    }
+    it("should parse") {
+      TextItemsParser.link.parse("<hello>") should parseTo(Link("hello"))
+      TextItemsParser.link.parse("[foo](/bar)") should parseTo(Link("foo", "/bar"))
+    }
   }
 
   describe("th break") {
 
     it("should parse") {
-      break.parse("***") should parseTo(Break)
-      break.parse("******") should parseTo(Break)
-      break.parse("---") should parseTo(Break)
-      break.parse("___") should parseTo(Break)
-      break.parse("   ___") should parseTo(Break)
+      thBreak.parse("***") should parseTo(ThBreak)
+      thBreak.parse("******") should parseTo(ThBreak)
+      thBreak.parse("---") should parseTo(ThBreak)
+      thBreak.parse("___") should parseTo(ThBreak)
+      thBreak.parse("   ___") should parseTo(ThBreak)
     }
   }
 
@@ -45,7 +46,9 @@ class MdParserSpec extends FunSpec with Matchers {
           |and last""".stripMargin
 
       val expected = Paragraph.withItems(
-        Common("first second and last")
+        Text(Seq(Common("first"))),
+        Text(Seq(Common("second"))),
+        Text(Seq(Common("and last")))
       )
       paragraph.parse(p) should parseTo(expected)
     }
@@ -56,9 +59,8 @@ class MdParserSpec extends FunSpec with Matchers {
           |second""".stripMargin
 
       val expected = Paragraph.withItems(
-        Common("first "),
-        Link("foo", "/bar"),
-        Common(" second")
+        Text(Seq(Common("first "), Link("foo", "/bar"))),
+        Text(Seq(Common("second")))
       )
       paragraph.parse(p) should parseTo(expected)
     }
@@ -94,7 +96,6 @@ class MdParserSpec extends FunSpec with Matchers {
         ))
       ))
       val r = TextItemsParser.text.parse(p)
-      println(r)
       r should parseTo(expected)
     }
   }
@@ -157,8 +158,7 @@ class MdParserSpec extends FunSpec with Matchers {
       val p =
         """1. first
           |2. second
-          |3. third
-         """.stripMargin
+          |3. third""".stripMargin
 
       val expected = OrderedList(Seq(
         ListItem(Seq(Text(Seq(Common("first"))))),
@@ -182,26 +182,60 @@ class MdParserSpec extends FunSpec with Matchers {
           |second
           |third <asdsad>
           |
-          |ssssssssssss""".stripMargin
+          |ssssssssssss
+          |
+          |- item1
+          |- item 2""".stripMargin
 
       val r = markdown.parse(text)
-      println(r)
+      r should parseTo(
+        Markdown(Seq(
+          Header(1, "Header1"),
+          ThBreak,
+          Header(4, "Header2"),
+          Paragraph.withItems(
+            Text(Seq(Common("paragpraph <sfaa dsfdsf"))),
+            Text(Seq(Common("second"))),
+            Text(Seq(Common("third "), Link("asdsad")))
+          ),
+          Paragraph.withItems(
+            Text(Seq(Common("ssssssssssss")))
+          ),
+          UnorderedList(Seq(
+            ListItem(Seq(Text(Seq(Common("item1"))))),
+            ListItem(Seq(Text(Seq(Common("item 2")))))
+          ))
+        ))
+      )
     }
 
   }
 
   class ParserMatcher(a: Any) extends Matcher[Parsed[_]] {
+    import mdparse.write.writers._
+
     override def apply(left: Parsed[_]): MatchResult = {
       val result = left match {
         case s: Parsed.Success[_] => s.value == a
         case f: Parsed.Failure => false
       }
+
+      def prettyS(x: Any): String = x match {
+        case Parsed.Success(v, _) => prettyS(v)
+        case pr: Product => pr.printDebug
+        case any => any.toString
+      }
+
+      val rightString = prettyS(a)
+      val leftString = prettyS(left)
+
       MatchResult(
         result,
-        s"$left didn't match with $a",
-        s"$left is match with a"
+        s"Parsed:\n $leftString\ndidn't match with\n $rightString",
+        s"Parsed:\n $leftString\nis match with\n $rightString"
       )
     }
+
   }
 
   def parseTo[A](a: A): ParserMatcher = new ParserMatcher(a)

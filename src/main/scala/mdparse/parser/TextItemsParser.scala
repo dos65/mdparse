@@ -1,4 +1,4 @@
-package mdparse
+package mdparse.parser
 
 import fastparse.all._
 import mdparse.md._

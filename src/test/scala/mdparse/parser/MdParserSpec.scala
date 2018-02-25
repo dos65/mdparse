@@ -26,6 +26,13 @@ class MdParserSpec extends FunSpec with Matchers {
     }
   }
 
+  describe("Image") {
+
+    it("should parse") {
+      TextItemsParser.image.parse("![foo](bar)") should parseTo(Image("foo", "bar", "foo"))
+    }
+  }
+
   describe("th break") {
 
     it("should parse") {
@@ -173,7 +180,6 @@ class MdParserSpec extends FunSpec with Matchers {
   describe("complex parsing") {
 
     it("should parse all") {
-      import mdparse.write.writers
       val text = """# Header1
           |
           |----
@@ -213,7 +219,7 @@ class MdParserSpec extends FunSpec with Matchers {
   }
 
   class ParserMatcher(a: Any) extends Matcher[Parsed[_]] {
-    import mdparse.write.writers._
+    import DebugPrinter._
 
     override def apply(left: Parsed[_]): MatchResult = {
       val result = left match {

@@ -1,21 +1,10 @@
-package mdparse.write
+package mdparse.parser
 
-import mdparse.Markdown
-import mdparse.md._
-
-import scala.annotation.tailrec
-
-object writers {
+object DebugPrinter {
 
   implicit class PrettyOps(product: Product) {
     def printDebug: String = DebugPrinter.write(product)
   }
-
-}
-
-
-
-object DebugPrinter {
 
   case class ShiftedBuilder(shift: Int, underlying: StringBuilder) {
 

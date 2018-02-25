@@ -24,6 +24,7 @@ object md {
   object Link {
     def apply(link: String): Link = new Link(link, link)
   }
+  final case class Image(text: String, destination: String, alt: String) extends TextItem
 
   final case class Common(s: String) extends TextItem
   final case class Strong(elems: Seq[TextItem]) extends TextItem

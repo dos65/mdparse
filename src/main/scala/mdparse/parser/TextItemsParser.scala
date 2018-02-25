@@ -26,6 +26,9 @@ trait TextItemsParser extends Basic {
     P(short | long)
   }
 
+  val image = {
+    P("!" ~ wrappedBy("[", "]") ~ wrappedBy("(", ")")).map({case (text, dest) => Image(text, dest, text)})
+  }
 
   val strong = {
     val italic = {
@@ -56,7 +59,7 @@ trait TextItemsParser extends Basic {
   }
 
   val text = {
-    P(link | italic | strong | AnyTextChar.!).rep(1)
+    P(image | link | italic | strong | AnyTextChar.!).rep(1)
       .map(raw => {
         val items = foldChars(raw)
         Text(items)
@@ -64,7 +67,7 @@ trait TextItemsParser extends Basic {
   }
 
   val textTrimmed  = {
-    P(" ".rep ~ link | italic | strong | AnyTextChar.!).rep(1)
+    P(" ".rep ~ image | link | italic | strong | AnyTextChar.!).rep(1)
       .map(raw => {
         val items = foldChars(raw)
         if (items.size == 1) {

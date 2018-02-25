@@ -1,6 +1,7 @@
 package mdparse.parser
 
 import fastparse.all._
+import mdparse.Markdown
 import mdparse.md._
 
 trait MdParser extends Basic {

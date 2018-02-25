@@ -1,6 +1,9 @@
 package mdparse.write
 
-import mdparse.md.{Markdown, MdItem}
+import mdparse.Markdown
+import mdparse.md._
+
+import scala.annotation.tailrec
 
 object writers {
 
@@ -9,6 +12,8 @@ object writers {
   }
 
 }
+
+
 
 object DebugPrinter {
 

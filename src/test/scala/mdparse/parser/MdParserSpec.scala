@@ -1,7 +1,7 @@
 package mdparse.parser
 
 import fastparse.all._
-import mdparse.md
+import mdparse.{Markdown, md}
 import mdparse.md._
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.{FunSpec, Matchers}
@@ -173,6 +173,7 @@ class MdParserSpec extends FunSpec with Matchers {
   describe("complex parsing") {
 
     it("should parse all") {
+      import mdparse.write.writers
       val text = """# Header1
           |
           |----

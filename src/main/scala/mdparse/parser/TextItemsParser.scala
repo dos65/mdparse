@@ -8,14 +8,6 @@ import scala.collection.mutable.ArrayBuffer
 
 trait TextItemsParser extends Basic {
 
-  val AnyTextChar = P(!(ln | tab) ~ AnyChar)
-
-  private def wrappedBy(s: String): P[String] = wrappedBy(s, s)
-
-  private def wrappedBy(start: String, end: String): P[String] = {
-    P(start ~ (!end ~ AnyTextChar).rep(1).! ~ end)
-  }
-
   val link = {
     val short = wrappedBy("<", ">").map(l => Link(l))
     val long = {
@@ -89,7 +81,6 @@ trait TextItemsParser extends Basic {
         Text(items)
       })
   }
-
 
   private def foldChars(elems: Seq[Any]): mutable.Buffer[TextItem] = {
 

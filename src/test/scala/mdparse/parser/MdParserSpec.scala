@@ -1,7 +1,7 @@
 package mdparse.parser
 
 import fastparse.all._
-import mdparse.{Markdown, md}
+import mdparse.{HtmlUnit, Markdown, md}
 import mdparse.md._
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.{FunSpec, Matchers}
@@ -177,6 +177,46 @@ class MdParserSpec extends FunSpec with Matchers {
     }
   }
 
+  describe("html") {
+
+    it("should parse self closed tags") {
+      HtmlParser.html.parse("<br/>") should parseTo(RawHtml(HtmlUnit.selfClosingTag("br")))
+    }
+
+    it("should parse tag") {
+      HtmlParser.html.parse("<div></div>") should parseTo(RawHtml(HtmlUnit.tag("div", Seq.empty)))
+    }
+
+    it("should parse tag with attrs") {
+      val expected = HtmlUnit.tag("a", Seq("target" -> "blank"), Seq.empty)
+      HtmlParser.html.parse("<a target=\"blank\"></a>") should parseTo(RawHtml(expected))
+    }
+
+    it("should parse tag with innerbody") {
+      val html =
+        """<div attr="value">
+          |   <ul>
+          |      <li><a href="link">yoyo</a></li>
+          |   </ul>
+          |   <p>
+          |   sadasd
+          |   sdasd sadasd sdasd
+          |   </p>
+          |   <br/>
+          |</div>
+        """.stripMargin
+      val easy =
+        """<div attr="value">
+          |  <a href="xx">
+          |   yoyo
+          |  </a>
+          |</div>""".stripMargin
+      val result = HtmlParser.html.parse(html)
+      println(result.get.value.node.toTextRepr.render)
+    }
+
+  }
+
   describe("complex parsing") {
 
     it("should parse all") {
@@ -218,6 +258,7 @@ class MdParserSpec extends FunSpec with Matchers {
 
   }
 
+
   class ParserMatcher(a: Any) extends Matcher[Parsed[_]] {
     import DebugPrinter._
 
@@ -229,6 +270,7 @@ class MdParserSpec extends FunSpec with Matchers {
 
       def prettyS(x: Any): String = x match {
         case Parsed.Success(v, _) => prettyS(v)
+        case f: Parsed.Failure => f.msg
         case pr: Product => pr.printDebug
         case any => any.toString
       }

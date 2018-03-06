@@ -38,6 +38,8 @@ object md {
   final case class UnorderedList(items: Seq[ListItem]) extends MdList
   final case class OrderedList(items: Seq[ListItem]) extends MdList
 
+  final case class RawHtml(node: HtmlTag) extends MdLeaf
+
 }
 
 case class Markdown(items: Seq[MdItem]) {
@@ -50,7 +52,8 @@ case class Markdown(items: Seq[MdItem]) {
       case h: Header => header(h.level, h.text)
       case ThBreak => th
       case Paragraph(elems) => p(elems.map(toHtml))
-      case Link(dest, text) => a(dest, text)
+      case Link(text, dest) => a(dest, text)
+      case Image(text, dest, alt) => img(dest, text, alt)
       case Common(text) => innerBody(text)
       case Strong(elems) => strong(elems.map(toHtml))
       case Italic(elems) => italic(elems.map(toHtml))
@@ -58,6 +61,7 @@ case class Markdown(items: Seq[MdItem]) {
       case ListItem(elems) => li(elems.map(toHtml))
       case UnorderedList(elems) => ul(elems.map(toHtml))
       case OrderedList(elems) => ol(elems.map(toHtml))
+      case RawHtml(node) => node
     }
     items.map(toHtml)
   }

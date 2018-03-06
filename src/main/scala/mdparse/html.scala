@@ -11,14 +11,14 @@ object HtmlUnit {
 
   type Attrs = Seq[(String, String)]
 
-  class InnerTextBody(value: String) extends HtmlUnit {
+  final case class InnerTextBody(value: String) extends HtmlUnit {
     def toTextRepr: TextRepr = TextRepr.inlined(value)
   }
-  class InnerBody(elems: Seq[HtmlUnit]) extends HtmlUnit {
+  final case class InnerBody(elems: Seq[HtmlUnit]) extends HtmlUnit {
     def toTextRepr: TextRepr = TextRepr.lines(elems.map(_.toTextRepr))
   }
 
-  class OneLineTag(name: String, attributes: Attrs, body: Seq[HtmlUnit]) extends HtmlTag {
+  final case class InlineTag(name: String, attributes: Attrs, body: Seq[HtmlUnit]) extends HtmlTag {
     def toTextRepr: TextRepr = {
       import TextRepr._
 
@@ -30,7 +30,7 @@ object HtmlUnit {
     }
   }
 
-  class Tag(name: String, attributes: Attrs, body: Seq[HtmlUnit]) extends HtmlTag {
+  final case class Tag(name: String, attributes: Attrs, body: Seq[HtmlUnit]) extends HtmlTag {
     def toTextRepr: TextRepr = {
       import TextRepr._
 
@@ -44,7 +44,7 @@ object HtmlUnit {
     }
   }
 
-  class SelfClosingTag(name: String, attributes: Attrs) extends HtmlTag {
+  final case class SelfClosingTag(name: String, attributes: Attrs) extends HtmlTag {
     def toTextRepr: TextRepr = {
       import TextRepr._
 
@@ -53,8 +53,8 @@ object HtmlUnit {
     }
   }
 
-  def inlinedTag(name: String, attrs: Attrs, body: Seq[HtmlUnit]): HtmlTag = new OneLineTag(name, attrs, body)
-  def inlinedTag(name: String, body: Seq[HtmlUnit]): HtmlTag = new OneLineTag(name, Seq.empty, body)
+  def inlinedTag(name: String, attrs: Attrs, body: Seq[HtmlUnit]): HtmlTag = new InlineTag(name, attrs, body)
+  def inlinedTag(name: String, body: Seq[HtmlUnit]): HtmlTag = new InlineTag(name, Seq.empty, body)
   def tag(name: String, attrs: Attrs, body: Seq[HtmlUnit]): HtmlTag = new Tag(name, attrs, body)
   def tag(name: String, body: Seq[HtmlUnit]): HtmlTag = new Tag(name, Seq.empty, body)
   def selfClosingTag(name: String, attrs: Attrs): HtmlTag = new SelfClosingTag(name, attrs)
@@ -71,6 +71,7 @@ object HtmlTags {
   val th = selfClosingTag("th")
   def p(inner: Seq[HtmlUnit]): HtmlTag = tag("p", inner)
   def a(dest: String, text: String): HtmlTag = inlinedTag("a", Seq(innerBody(text)))
+  def img(dest: String, text: String, alt: String): HtmlTag = inlinedTag("img", Seq("alt" -> alt), Seq(innerBody(text)))
   def strong(inner: Seq[HtmlUnit]): HtmlTag = inlinedTag("string", inner)
   def italic(inner: Seq[HtmlUnit]): HtmlTag = inlinedTag("italic", inner)
   def li(inner: Seq[HtmlUnit]): HtmlTag = tag("li", inner)

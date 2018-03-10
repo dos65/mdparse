@@ -50,8 +50,10 @@ trait TextItemsParser extends Basic {
     })
   }
 
+  val code = wrappedBy("`").map(s => Code(s))
+
   val text = {
-    P(image | link | italic | strong | AnyTextChar.!).rep(1)
+    P(image | link | italic | strong | code | AnyTextChar.!).rep(1)
       .map(raw => {
         val items = foldChars(raw)
         Text(items)
@@ -59,7 +61,7 @@ trait TextItemsParser extends Basic {
   }
 
   val textTrimmed  = {
-    P(" ".rep ~ image | link | italic | strong | AnyTextChar.!).rep(1)
+    P(" ".rep ~ image | link | italic | strong | code | AnyTextChar.!).rep(1)
       .map(raw => {
         val items = foldChars(raw)
         if (items.size == 1) {

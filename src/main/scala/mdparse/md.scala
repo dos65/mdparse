@@ -29,6 +29,7 @@ object md {
   final case class Common(s: String) extends TextItem
   final case class Strong(elems: Seq[TextItem]) extends TextItem
   final case class Italic(elems: Seq[TextItem]) extends TextItem
+  final case class Code(s: String) extends TextItem
 
   final case class Text(items: Seq[TextItem]) extends MdLeaf
 
@@ -40,6 +41,7 @@ object md {
 
   final case class RawHtml(node: HtmlTag) extends MdLeaf
 
+  final case class FencedCode(lang: Option[String], data: String) extends MdLeaf
 }
 
 case class Markdown(items: Seq[MdItem]) {
@@ -62,6 +64,8 @@ case class Markdown(items: Seq[MdItem]) {
       case UnorderedList(elems) => ul(elems.map(toHtml))
       case OrderedList(elems) => ol(elems.map(toHtml))
       case RawHtml(node) => node
+      case Code(s) => code(s)
+      case FencedCode(lang, data) => pre(Seq(code(lang, data)))
     }
     items.map(toHtml)
   }

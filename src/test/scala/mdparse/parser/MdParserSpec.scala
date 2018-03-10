@@ -1,7 +1,7 @@
 package mdparse.parser
 
 import fastparse.all._
-import mdparse.{HtmlUnit, Markdown, md}
+import mdparse.{HtmlTags, HtmlUnit, Markdown, md}
 import mdparse.md._
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.{FunSpec, Matchers}
@@ -105,6 +105,32 @@ class MdParserSpec extends FunSpec with Matchers {
       val r = TextItemsParser.text.parse(p)
       r should parseTo(expected)
     }
+
+    it("should parse code") {
+      val p = "`sudo rm -rf`"
+      val r = TextItemsParser.text.parse(p)
+      r should parseTo(Text(Seq(Code("sudo rm -rf"))))
+    }
+  }
+
+  describe("fenced code") {
+
+    it("should parse") {
+      val s =
+        """```scala
+          |def x(a: Int) = a + 1
+          |def x2(): Unit = ???
+          |```
+        """.stripMargin
+
+      val expected = FencedCode(
+        lang = Some("scala"),
+        data =
+          s"""def x(a: Int) = a + 1
+             |def x2(): Unit = ???""".stripMargin
+      )
+      MdParser.fencedCode.parse(s) should parseTo(expected)
+    }
   }
 
   describe("p2") {
@@ -205,13 +231,8 @@ class MdParserSpec extends FunSpec with Matchers {
           |   <br/>
           |</div>
         """.stripMargin
-      val easy =
-        """<div attr="value">
-          |  <a href="xx">
-          |   yoyo
-          |  </a>
-          |</div>""".stripMargin
       val result = HtmlParser.html.parse(html)
+      // TODO
       println(result.get.value.node.toTextRepr.render)
     }
 
@@ -231,6 +252,14 @@ class MdParserSpec extends FunSpec with Matchers {
           |
           |ssssssssssss
           |
+          |<div>
+          |  <a href="foo">foo</a>
+          |</div>
+          |
+          |```scala
+          |val a = "s"
+          |```
+          |
           |- item1
           |- item 2""".stripMargin
 
@@ -248,6 +277,12 @@ class MdParserSpec extends FunSpec with Matchers {
           Paragraph.withItems(
             Text(Seq(Common("ssssssssssss")))
           ),
+          RawHtml(
+            HtmlUnit.tag("div", Seq(
+              HtmlUnit.tag("a", Seq("href" -> "foo"), Seq(HtmlTags.innerBody("foo")))
+            ))
+          ),
+          FencedCode(Some("scala"), "val a = \"s\""),
           UnorderedList(Seq(
             ListItem(Seq(Text(Seq(Common("item1"))))),
             ListItem(Seq(Text(Seq(Common("item 2")))))

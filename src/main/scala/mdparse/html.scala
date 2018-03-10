@@ -77,4 +77,10 @@ object HtmlTags {
   def li(inner: Seq[HtmlUnit]): HtmlTag = tag("li", inner)
   def ul(inner: Seq[HtmlUnit]): HtmlTag = tag("ul", inner)
   def ol(inner: Seq[HtmlUnit]): HtmlTag = tag("ol", inner)
+  def code(data: String): HtmlTag = tag("code", Seq(innerBody(data)))
+  def code(lang: Option[String], data: String): HtmlTag = {
+    val langClass = lang.fold(Seq.empty[(String, String)])(v => Seq("class" -> s"language-$v"))
+    tag("code", langClass, Seq(innerBody(data)))
+  }
+  def pre(inner: Seq[HtmlUnit]): HtmlTag = tag("pre", inner)
 }

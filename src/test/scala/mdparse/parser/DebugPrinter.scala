@@ -37,29 +37,32 @@ object DebugPrinter {
 
   private def write(value: Any, builder: ShiftedBuilder): Unit = {
     value match {
+      case s: String =>
+        s.split("\n").foreach(p => builder.appendLine("\"", p, "\""))
       case tr: Traversable[_] =>
         tr.foreach(i => write(i, builder))
       case p: Product => writeP(p, builder)
-      case s: String => builder.appendLine("\"", s, "\"")
       case x => builder.appendLine(x.toString)
     }
   }
 
   private def writeP(p: Product, builder: ShiftedBuilder): Unit = {
     builder.appendLine(p.getClass.getSimpleName, "(")
+
     val nested = builder.shift(shiftSize)
-    val values = p.productIterator
-    if (p.productArity == 0) {
+    val fields = p.getClass.getDeclaredFields.map(_.getName).toList
+    val values = p.productIterator.toList
+    val elems = fields zip values
+
+    if (elems.isEmpty) {
       builder.appendLine(p.getClass.getSimpleName)
-    } else if (p.productArity == 1) {
-      p.getClass.getDeclaredFields.foreach(f => {
-        write(values.next(), nested)
-      })
+    } else if (elems.size == 1) {
+      elems.foreach({case (_, v) => write(v, nested)})
     } else {
       val inside = nested.shift(shiftSize)
-      p.getClass.getDeclaredFields.foreach(f => {
-        nested.appendLine(f.getName, ":")
-        write(values.next(), inside)
+      elems.foreach({case (name, v) =>
+        nested.appendLine(name, ":")
+        write(v, inside)
       })
     }
 

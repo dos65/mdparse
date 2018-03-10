@@ -1,6 +1,5 @@
 package mdparse.parser
 
-import fastparse.WhitespaceApi
 import fastparse.all._
 import mdparse.{HtmlTags, HtmlUnit}
 import mdparse.md._
@@ -24,7 +23,6 @@ trait HtmlParser extends Basic {
       def end(n: String) = P("</" ~ n ~ ">" ~/)
 
       start.flatMap({case (n, attrs) =>
-        println(s"Catch ${n}")
         val ending = end(n)
         val x = P((!ending ~ (tag | ln | tab | AnyChar.!)).rep(0) ~ ending ~ (ln | tab).rep(0))
         val z = x.map(seq =>

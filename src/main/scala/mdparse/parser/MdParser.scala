@@ -79,8 +79,22 @@ trait MdParser extends Basic {
     mkLists(0)
   }
 
+  val fencedCode: P[FencedCode] = {
+    def forSymbol(ch: Char): P[FencedCode] = {
+      def wrapper(min: Int) = ch.toString.rep(min)
+
+      P(wrapper(3).!).flatMap(s => {
+        val lastMin = s.length
+        val end = wrapper(lastMin)
+        P(Word.!.? ~ ln ~ (CharsWhile(c => c != ch && c != '\n' && c != '\r') | !(ln ~ end) ~ AnyChar).!.rep(1) ~ ln ~ wrapper(lastMin))
+          .map({case (lang, code) => FencedCode(lang, code.mkString(""))})
+      })
+    }
+    forSymbol('`') | forSymbol('~')
+  }
+
   val markdown: P[Markdown] = {
-    val items = header | thBreak | blankLine | list | paragraph
+    val items = header | thBreak | HtmlParser.html | fencedCode | blankLine | list | paragraph
     P(items.rep ~ End).map(all => {
       val mdItems = all.collect({case b: MdItem => b})
       Markdown(mdItems)

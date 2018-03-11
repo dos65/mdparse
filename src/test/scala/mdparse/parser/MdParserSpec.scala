@@ -1,7 +1,7 @@
 package mdparse.parser
 
 import fastparse.all._
-import mdparse.{HtmlTags, HtmlUnit, Markdown, md}
+import mdparse._
 import mdparse.md._
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.{FunSpec, Matchers}
@@ -201,6 +201,74 @@ class MdParserSpec extends FunSpec with Matchers {
 
       list.parse(p) should parseTo(expected)
     }
+
+    it("should respect tabs") {
+      val s =
+        "* first\n" +
+          "\t* second\n" +
+          "\t* third"
+
+      val r = MdParser.list.parse(s)
+      val expected = UnorderedList(Seq(
+        ListItem(Seq(
+          Text(Seq(Common("first"))),
+          UnorderedList(Seq(
+            ListItem(Seq(Text(Seq(Common("second"))))),
+            ListItem(Seq(Text(Seq(Common("third")))))
+          ))))
+
+      ))
+      r should parseTo(expected)
+    }
+
+    it("respect inner") {
+      val s =
+        """- a
+          |  * b
+          |  * c
+          |    - d
+          |- XXXX
+        """.stripMargin
+      val r = MdParser.list.parse(s)
+      println(r)
+    }
+
+    it("case 2") {
+      val s =
+        """* 00:00:30 - Интро про Александра, типы, химия, лиспы, идрисы
+          |    - Z
+          |        - sdsd
+          |    - ASoftware Foundations (1)ttpssoftwarefoundations.cis.upenn.edu
+          |    - [Software Foundations (2)](https://github.com/idris-hackers/software-foundations)
+          |    - [Type driven development with Idris](https://www.manning.com/books/type-driven-development-with-idris)
+          |    - [Linear Algebra via Exterior Products](https://sites.google.com/site/winitzki/linalg)
+          |* [Блог Виницкого](http://chaource.livejournal.com/)""".stripMargin
+      println(MdParser.list.parse(s))
+    }
+
+    it("wtf") {
+      import fastparse.all._
+
+//      val x = P(" ".rep(exactly = 2))
+//      val y = P(" ".rep(exactly = 4))
+//
+//      val or = P(y | x)
+//      val sus = P(or ~ "-")
+//      println(sus.parse("  -"))
+//      println()
+//      println(sus.parse("     -"))
+//      println()
+//      println(sus.parse("    -"))
+//      println()
+
+
+      val prefix = new parser.MdParser.ListPrefix(P("-"), UnorderedList.apply)
+
+      println(prefix.parser(0).parse("-"))
+      println(prefix.parser(1).parse("    -"))
+      println(prefix.parser(1).parse("  -"))
+      println(prefix.parser(2).parse("    -"))
+    }
   }
 
   describe("html") {
@@ -291,6 +359,7 @@ class MdParserSpec extends FunSpec with Matchers {
       )
     }
 
+
   }
 
 
@@ -305,7 +374,7 @@ class MdParserSpec extends FunSpec with Matchers {
 
       def prettyS(x: Any): String = x match {
         case Parsed.Success(v, _) => prettyS(v)
-        case f: Parsed.Failure => f.msg
+        case f: fastparse.core.Parsed.Failure[_, _] => f.msg
         case pr: Product => pr.printDebug
         case any => any.toString
       }

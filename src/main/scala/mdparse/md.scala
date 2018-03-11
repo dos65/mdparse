@@ -7,18 +7,15 @@ object md {
 
   sealed trait MdItem extends Product with Serializable
 
-  sealed trait MdLeaf extends MdItem
-  sealed trait MdNode extends MdItem
-
-  final case class Header(level: Int, text: String) extends MdLeaf
-  case object ThBreak extends MdLeaf
+  final case class Header(level: Int, text: String) extends MdItem
+  case object ThBreak extends MdItem
 
   final case class Paragraph(items: Seq[MdItem]) extends MdItem
   object Paragraph {
     def withItems(items: MdItem*): Paragraph = Paragraph(items)
   }
 
-  sealed trait TextItem extends MdLeaf
+  sealed trait TextItem extends MdItem
 
   final case class Link(text: String, destination: String) extends TextItem
   object Link {
@@ -31,17 +28,17 @@ object md {
   final case class Italic(elems: Seq[TextItem]) extends TextItem
   final case class Code(s: String) extends TextItem
 
-  final case class Text(items: Seq[TextItem]) extends MdLeaf
+  final case class Text(items: Seq[TextItem]) extends MdItem
 
-  final case class ListItem(items: Seq[MdItem]) extends MdNode
+  final case class ListItem(items: Seq[MdItem]) extends MdItem
 
-  sealed trait MdList extends MdNode
+  sealed trait MdList extends MdItem
   final case class UnorderedList(items: Seq[ListItem]) extends MdList
   final case class OrderedList(items: Seq[ListItem]) extends MdList
 
-  final case class RawHtml(node: HtmlTag) extends MdLeaf
+  final case class RawHtml(node: HtmlTag) extends MdItem
 
-  final case class FencedCode(lang: Option[String], data: String) extends MdLeaf
+  final case class FencedCode(lang: Option[String], data: String) extends MdItem
 }
 
 case class Markdown(items: Seq[MdItem]) {

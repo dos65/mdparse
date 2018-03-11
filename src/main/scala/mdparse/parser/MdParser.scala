@@ -30,20 +30,18 @@ trait MdParser extends Basic {
     P(TextItemsParser.text ~ lnOrEnd).rep(1).map(items => Paragraph(items))
   }
 
-  val list = {
-
-    case class ListPrefix[T](sym: P0, f: Seq[ListItem] => T) {
-
-      def parser(level: Int): P0 = {
-        if (level > 0) {
-          val spaces = space.rep(exactly = level * 4)
-          spaces ~ sym
-        } else {
-          sym
-        }
-      }
-
+  case class ListPrefix(sym: P0, f: Seq[ListItem] => MdList) {
+    def parser(level: Int): P0 = if (level > 0) {
+      val spaces = P(" ".!.rep(min = level * 2 , max = level * 4)).filter(_.length % 2 == 0).map(_ => ())
+      val tabs = P("\t".rep(exactly = level))
+      (spaces | tabs) ~ sym
+    } else {
+      sym
     }
+  }
+
+
+  val list = {
 
     val prefixes = Seq(
       ListPrefix(P("*"), UnorderedList.apply),
@@ -54,21 +52,26 @@ trait MdParser extends Basic {
 
     def listItem(
       head: Text,
-      prefix: ListPrefix[_],
+      nextPref: ListPrefix,
       level: Int): P[ListItem] = {
 
-      val maybeNexts = for ( i <- 0 to level + 1 ) yield prefix.parser(i)
-      val catchItems = maybeNexts.reduceLeft(_ | _)
+      val maybePrev = for {
+        i <- 0 to level
+        prefix <- prefixes
+      } yield prefix.parser(i)
+      val catchItems = maybePrev.reduceLeft(_ | _)
 
-      val notNextItem = !(catchItems | thBreak )
-      val content = P(notNextItem ~ TextItemsParser.textTrimmed ~ lnOrEnd)
+      val stop = catchItems | thBreak | blankLine.rep(2)
 
       val inner = mkLists(level + 1)
-      (content.rep(0) ~ inner.rep(0)).map({case (content: Seq[Text],  inner: Seq[MdList]) => ListItem(head +: (content ++ inner)) })
+
+      val line = P(TextItemsParser.textTrimmed ~/ lnOrEnd)
+      P(!stop ~ (inner | line)).rep(0).map(body => ListItem(head +: body))
     }
 
-    def mkList[T](prefix: ListPrefix[T], level: Int): P[T] = {
-      val headParser = P(prefix.parser(level) ~ space ~ TextItemsParser.textTrimmed ~/ lnOrEnd)
+    def mkList(prefix: ListPrefix, level: Int): P[MdList] = {
+      val prefixP = prefix.parser(level)
+      val headParser = P(prefixP ~ space ~ TextItemsParser.textTrimmed ~/ lnOrEnd)
       headParser.flatMap(head => listItem(head, prefix, level))
         .rep(1)
         .map(items => prefix.f(items))

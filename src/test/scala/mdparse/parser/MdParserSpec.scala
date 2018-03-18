@@ -29,7 +29,12 @@ class MdParserSpec extends FunSpec with Matchers {
   describe("Image") {
 
     it("should parse") {
-      TextItemsParser.image.parse("![foo](bar)") should parseTo(Image("foo", "bar", "foo"))
+      val s =
+        """![foo *bar*]
+          |
+          |[foo *bar*]: train.jpg "train & tracks"""".stripMargin
+      println(TextItemsParser.image.parse(s))
+      TextItemsParser.image.parse("![foo](bar)") should parseTo(Image("bar", "foo", None))
     }
   }
 
@@ -53,9 +58,9 @@ class MdParserSpec extends FunSpec with Matchers {
           |and last""".stripMargin
 
       val expected = Paragraph.withItems(
-        Text(Seq(Common("first"))),
-        Text(Seq(Common("second"))),
-        Text(Seq(Common("and last")))
+        Common("first"),
+        Common("second"),
+        Common("and last")
       )
       paragraph.parse(p) should parseTo(expected)
     }
@@ -66,8 +71,8 @@ class MdParserSpec extends FunSpec with Matchers {
           |second""".stripMargin
 
       val expected = Paragraph.withItems(
-        Text(Seq(Common("first "), Link("foo", "/bar"))),
-        Text(Seq(Common("second")))
+        Common("first "), Link("foo", "/bar"),
+        Common("second")
       )
       paragraph.parse(p) should parseTo(expected)
     }
@@ -93,7 +98,7 @@ class MdParserSpec extends FunSpec with Matchers {
 
     it("should parse any text") {
       val p = "11sdd *three* one two **fourth [title](link)**"
-      val expected = Text(Seq(
+      val expected = Seq(
         Common("11sdd "),
         Italic(Seq(Common("three"))),
         Common(" one two "),
@@ -101,7 +106,7 @@ class MdParserSpec extends FunSpec with Matchers {
           Common("fourth "),
           Link("title", "link")
         ))
-      ))
+      )
       val r = TextItemsParser.text.parse(p)
       r should parseTo(expected)
     }
@@ -109,7 +114,7 @@ class MdParserSpec extends FunSpec with Matchers {
     it("should parse code") {
       val p = "`sudo rm -rf`"
       val r = TextItemsParser.text.parse(p)
-      r should parseTo(Text(Seq(Code("sudo rm -rf"))))
+      r should parseTo(Seq(Code("sudo rm -rf")))
     }
   }
 
@@ -138,8 +143,8 @@ class MdParserSpec extends FunSpec with Matchers {
     it("basic example") {
       val p = "hello dasd **sadasd** \n asdsadsadrewr sa asr "
       val expected = Paragraph(Seq(
-        Text(Seq( Common("hello dasd "), Strong(Seq( Common("sadasd") )), Common(" ") )),
-        Text(Seq( Common(" asdsadsadrewr sa asr ") ))
+        Common("hello dasd "), Strong(Seq( Common("sadasd") )), Common(" "),
+        Common(" asdsadsadrewr sa asr ")
       ))
       val r = MdParser.paragraph.parse(p)
       r should parseTo(expected)
@@ -161,25 +166,25 @@ class MdParserSpec extends FunSpec with Matchers {
            |$s third""".stripMargin
       }
       val expected = UnorderedList(Seq(
-        ListItem(Seq(Text(Seq(Common("first"))))),
+        ListItem(Seq(Common("first"))),
         ListItem(Seq(
-          Text(Seq(Common("second")) ),
+          Common("second"),
           UnorderedList(Seq(
             ListItem(Seq(
-              Text(Seq(Common("inner-1"))),
-              Text(Seq(Common("dsfdsfdsfsd"))),
-              Text(Seq(Common("dsfsdfsdfsdfs"))),
+              Common("inner-1"),
+              Common("dsfdsfdsfsd"),
+              Common("dsfsdfsdfsdfs"),
               UnorderedList(Seq(
-                ListItem(Seq(Text(Seq(Common("third-level-1"))))),
-                ListItem(Seq(Text(Seq(Common("third-level-2")))))
+                ListItem(Seq(Common("third-level-1"))),
+                ListItem(Seq(Common("third-level-2")))
               ))
             )),
             ListItem(Seq(
-              Text(Seq(Common("inner-2")))
+              Common("inner-2"))
             ))
           ))
-        )),
-        ListItem(Seq(Text(Seq(Common("third")))))
+        ),
+        ListItem(Seq(Common("third")))
       ))
 
       list.parse(mkString("*")) should parseTo(expected)
@@ -194,9 +199,9 @@ class MdParserSpec extends FunSpec with Matchers {
           |3. third""".stripMargin
 
       val expected = OrderedList(Seq(
-        ListItem(Seq(Text(Seq(Common("first"))))),
-        ListItem(Seq(Text(Seq(Common("second"))))),
-        ListItem(Seq(Text(Seq(Common("third")))))
+        ListItem(Seq(Common("first"))),
+        ListItem(Seq(Common("second"))),
+        ListItem(Seq(Common("third")))
       ))
 
       list.parse(p) should parseTo(expected)
@@ -211,13 +216,13 @@ class MdParserSpec extends FunSpec with Matchers {
       val r = MdParser.list.parse(s)
       val expected = UnorderedList(Seq(
         ListItem(Seq(
-          Text(Seq(Common("first"))),
+          Common("first"),
           UnorderedList(Seq(
-            ListItem(Seq(Text(Seq(Common("second"))))),
-            ListItem(Seq(Text(Seq(Common("third")))))
-          ))))
-
-      ))
+              ListItem(Seq(Common("second"))),
+              ListItem(Seq(Common("third")))
+          ))
+        )
+      )))
       r should parseTo(expected)
     }
 
@@ -274,15 +279,15 @@ class MdParserSpec extends FunSpec with Matchers {
   describe("html") {
 
     it("should parse self closed tags") {
-      HtmlParser.html.parse("<br/>") should parseTo(RawHtml(HtmlUnit.selfClosingTag("br")))
+      HtmlParser.html.parse("<br/>") should parseTo(RawHtml(HtmlTags2.br))
     }
 
     it("should parse tag") {
-      HtmlParser.html.parse("<div></div>") should parseTo(RawHtml(HtmlUnit.tag("div", Seq.empty)))
+      HtmlParser.html.parse("<div></div>") should parseTo(RawHtml(HtmlTags2.div.empty))
     }
 
     it("should parse tag with attrs") {
-      val expected = HtmlUnit.tag("a", Seq("target" -> "blank"), Seq.empty)
+      val expected = HtmlTags2.a(Seq("target" -> "blank"), Seq.empty)
       HtmlParser.html.parse("<a target=\"blank\"></a>") should parseTo(RawHtml(expected))
     }
 
@@ -301,7 +306,7 @@ class MdParserSpec extends FunSpec with Matchers {
         """.stripMargin
       val result = HtmlParser.html.parse(html)
       // TODO
-      println(result.get.value.node.toTextRepr.render)
+//      println(result.get.value.node.toTextRepr.render)
     }
 
   }
@@ -338,22 +343,22 @@ class MdParserSpec extends FunSpec with Matchers {
           ThBreak,
           Header(4, "Header2"),
           Paragraph.withItems(
-            Text(Seq(Common("paragpraph <sfaa dsfdsf"))),
-            Text(Seq(Common("second"))),
-            Text(Seq(Common("third "), Link("asdsad")))
+            Common("paragpraph <sfaa dsfdsf"),
+            Common("second"),
+            Common("third "), Link("asdsad")
           ),
           Paragraph.withItems(
-            Text(Seq(Common("ssssssssssss")))
+            Common("ssssssssssss")
           ),
           RawHtml(
-            HtmlUnit.tag("div", Seq(
-              HtmlUnit.tag("a", Seq("href" -> "foo"), Seq(HtmlTags.innerBody("foo")))
+            HtmlTags2.div.body(Seq(
+              HtmlTags2.a("foo", "foo")
             ))
           ),
           FencedCode(Some("scala"), "val a = \"s\""),
           UnorderedList(Seq(
-            ListItem(Seq(Text(Seq(Common("item1"))))),
-            ListItem(Seq(Text(Seq(Common("item 2")))))
+            ListItem(Seq(Common("item1"))),
+            ListItem(Seq(Common("item 2")))
           ))
         ))
       )

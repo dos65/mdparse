@@ -11,21 +11,22 @@ class MarkdownSpec extends FunSpec with Matchers {
       ThBreak,
       Header(4, "Header2"),
       Paragraph.withItems(
-        Text(Seq(Common("paragpraph <sfaa dsfdsf"))),
-        Text(Seq(Common("second"))),
-        Text(Seq(Common("third "), Link("asdsad")))
+        Common("paragpraph <sfaa dsfdsf"),
+        Common("second"),
+        Common("third "), Link("asdsad")
       ),
       Paragraph.withItems(
-        Text(Seq(Common("ssssssssssss")))
+        Common("ssssssssssss")
       ),
       UnorderedList(Seq(
-        ListItem(Seq(Text(Seq(Common("item1"))))),
-        ListItem(Seq(Text(Seq(Common("item 2")))))
-      ))
+        ListItem(Seq(Common("item1"))),
+        ListItem(Seq(Common("item 2"))))
+      )
     ))
 
     val html = md.toHtml
-    val s = html.map(_.toTextRepr.render).mkString("\n")
+    // TODO!
+    val s = HtmlRender.Compact.render(html)
     val expect =
       """<h1>Header1</h1>
         |<th/>

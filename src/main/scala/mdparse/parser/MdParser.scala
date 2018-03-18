@@ -27,7 +27,7 @@ trait MdParser extends Basic {
   }
 
   val paragraph = {
-    P(TextItemsParser.text ~ lnOrEnd).rep(1).map(items => Paragraph(items))
+    P(TextItemsParser.text ~ lnOrEnd).rep(1).map(items => Paragraph(items.flatten))
   }
 
   case class ListPrefix(sym: P0, f: Seq[ListItem] => MdList) {
@@ -42,6 +42,7 @@ trait MdParser extends Basic {
 
 
   val list = {
+    type Inner = Either[MdList, Seq[TextItem]]
 
     val prefixes = Seq(
       ListPrefix(P("*"), UnorderedList.apply),
@@ -51,7 +52,7 @@ trait MdParser extends Basic {
     )
 
     def listItem(
-      head: Text,
+      head: Seq[TextItem],
       nextPref: ListPrefix,
       level: Int): P[ListItem] = {
 
@@ -63,10 +64,17 @@ trait MdParser extends Basic {
 
       val stop = catchItems | thBreak | blankLine.rep(2)
 
-      val inner = mkLists(level + 1)
+      val inner: P[Inner] = mkLists(level + 1).map(l => Left(l))
 
-      val line = P(TextItemsParser.textTrimmed ~/ lnOrEnd)
-      P(!stop ~ (inner | line)).rep(0).map(body => ListItem(head +: body))
+      val line: P[Inner] = P(TextItemsParser.textTrimmed ~/ lnOrEnd).map(l => Right(l))
+
+      P(!stop ~ (inner | line)).rep(0).map(body => {
+        val cleaned = body.foldLeft(List.empty[MdItem]) {
+          case (acc, Left(list)) => acc :+ list
+          case (acc, Right(items)) => acc ++ items
+        }
+        ListItem(head ++ cleaned)
+      })
     }
 
     def mkList(prefix: ListPrefix, level: Int): P[MdList] = {

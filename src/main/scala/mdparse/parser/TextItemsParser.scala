@@ -19,7 +19,25 @@ trait TextItemsParser extends Basic {
   }
 
   val image = {
-    P("!" ~ wrappedBy("[", "]") ~ wrappedBy("(", ")")).map({case (text, dest) => Image(text, dest, text)})
+    val title = P("\"" ~ (!"\"" ~ AnyTextChar).rep(1).! ~ "\"")
+    val dest = P("<".? ~ (!(">" | ")" | WordBreakers) ~ AnyChar).rep(1).! ~ ">".?)
+
+    val defaultEnd = P("(" ~ dest ~ space.rep(0) ~ title.? ~ space.rep(0) ~ ")")
+
+    def colonEnd(alt: String): P[(String, Option[String])] = {
+      P("\n".rep(max = 2)  ~ "[" ~ alt ~ "]: " ~ Word.! ~ space ~ ("\"" ~ (!("\"" | ln | tab) ~ AnyChar).rep(1).! ~ "\"").?)
+    }
+    P("!" ~ wrappedBy("[", "]")).flatMap(alt => {
+      (defaultEnd | colonEnd(alt)).map({case (dest, title) => {
+        val cleanedAlt = alt.split(" ").map(p => p.replaceAll("^_", "").replaceAll("_$", "").replaceAll("^\\*", "").replaceAll("\\*$", "")).mkString(" ")
+        Image(dest, cleanedAlt, title)
+      }})
+    })
+    //P("!" ~ wrappedBy("[", "]") ~ attrs).map({ case (alt, (dest, title)) =>
+    //  P("!" ~ wrappedBy("[", "]") ~ attrs).map({ case (alt, (dest, title)) =>
+//      val cleaned = dest.split(" ").map(p => p.replaceAll("^_", "").replaceAll("_$", "").replaceAll("^\\*", "").replaceAll("\\*$", "")).mkString("")
+//      Image(cleaned, alt, title)
+//    })
   }
 
   val strong = {
@@ -52,15 +70,11 @@ trait TextItemsParser extends Basic {
 
   val code = wrappedBy("`").map(s => Code(s))
 
-  val text = {
-    P(image | link | italic | strong | code | AnyTextChar.!).rep(1)
-      .map(raw => {
-        val items = foldChars(raw)
-        Text(items)
-      })
+  val text: P[Seq[TextItem]] = {
+    P(image | link | italic | strong | code | AnyTextChar.!).rep(1).map(foldChars)
   }
 
-  val textTrimmed  = {
+  val textTrimmed: P[Seq[TextItem]] = {
     P(" ".rep ~ image | link | italic | strong | code | AnyTextChar.!).rep(1)
       .map(raw => {
         val items = foldChars(raw)
@@ -80,7 +94,7 @@ trait TextItemsParser extends Basic {
             case x => x
           }
         }
-        Text(items)
+        items
       })
   }
 

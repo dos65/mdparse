@@ -1,13 +1,13 @@
 package mdparse.parser
 
 import fastparse.all._
-import mdparse.{HtmlTags, HtmlUnit}
+import mdparse.{HtmlTag2, HtmlTags2}
 import mdparse.md._
 
 trait HtmlParser extends Basic {
 
   val html: P[RawHtml] = {
-    val selfClosing: P[RawHtml] = P(wrappedBy("<", "/>").map(tag => RawHtml(HtmlUnit.selfClosingTag(tag))))
+    val selfClosing: P[RawHtml] = P(wrappedBy("<", "/>").map(tag => RawHtml(HtmlTag2(tag, Seq.empty, Seq.empty))))
 
     def tag: P[RawHtml] = {
 
@@ -30,11 +30,11 @@ trait HtmlParser extends Basic {
             case s: StringBuilder => s.toString().replaceAll("\n", "").replaceAll("\r\n", "").trim
             case x => x
           }.collect {
-            case s: String if s.nonEmpty => HtmlTags.innerBody(s)
+            case s: String if s.nonEmpty => HtmlTags2.innerText(s)
             case r: RawHtml => r.node
           }
         )
-        z.map(inner => RawHtml(HtmlUnit.tag(n, attrs, inner)))
+        z.map(inner => RawHtml(HtmlTag2(n, attrs, inner)))
       })
     }
     selfClosing | tag

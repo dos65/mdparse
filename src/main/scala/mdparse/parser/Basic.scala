@@ -18,7 +18,15 @@ trait Basic {
   def WhileNotIn(s: Char*): P0 = CharsWhile(c => !s.contains(c))
 
   val AnyTextChar = P(!ln ~ AnyChar)
+
+  val WordBreakers = P(ln | tab | space)
   val Word = P(!(ln | tab | space) ~ AnyChar).rep(1)
+
+  val defaultWordBreakers = Set(' ', '\n', '\t', '\r')
+  def WordCharsWhile(c: Char*) = {
+    val set = defaultWordBreakers ++ c.toSet
+    CharsWhile(c => !set.contains(c))
+  }
 
   def wrappedBy(s: String): P[String] = wrappedBy(s, s)
 

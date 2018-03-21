@@ -36,6 +36,14 @@ class MdParserSpec extends FunSpec with Matchers {
       println(TextItemsParser.image.parse(s))
       TextItemsParser.image.parse("![foo](bar)") should parseTo(Image("bar", "foo", None))
     }
+
+    it("multiline - second last"){
+      val s =
+        """![foo][bar]
+          |
+          |[bar]: /url""".stripMargin
+      println(TextItemsParser.image.parse(s))
+    }
   }
 
   describe("th break") {

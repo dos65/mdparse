@@ -18,26 +18,59 @@ trait TextItemsParser extends Basic {
     P(short | long)
   }
 
-  val image = {
+  // split thta bullshit into to different object
+  // ![foo] - should be defenition
+  // [foo]:/url resolution
+  val image: P[Image] = {
     val title = P("\"" ~ (!"\"" ~ AnyTextChar).rep(1).! ~ "\"")
     val dest = P("<".? ~ (!(">" | ")" | WordBreakers) ~ AnyChar).rep(1).! ~ ">".?)
 
-    val defaultEnd = P("(" ~ dest ~ space.rep(0) ~ title.? ~ space.rep(0) ~ ")")
+    val defaultEnd: P[(String, Option[String])] =
+      P("(" ~ dest ~ space.rep(0) ~ title.? ~ space.rep(0) ~ ")")
 
     def colonEnd(alt: String): P[(String, Option[String])] = {
-      P("\n".rep(max = 2)  ~ "[" ~ alt ~ "]: " ~ Word.! ~ space ~ ("\"" ~ (!("\"" | ln | tab) ~ AnyChar).rep(1).! ~ "\"").?)
+      P("\n".rep(max = 2)  ~ "[" ~ alt ~ "]: " ~ Word.! ~ (space ~ "\"" ~ (!("\"" | ln | tab) ~ AnyChar).rep(1).! ~ "\"").?)
     }
-    P("!" ~ wrappedBy("[", "]")).flatMap(alt => {
-      (defaultEnd | colonEnd(alt)).map({case (dest, title) => {
-        val cleanedAlt = alt.split(" ").map(p => p.replaceAll("^_", "").replaceAll("_$", "").replaceAll("^\\*", "").replaceAll("\\*$", "")).mkString(" ")
-        Image(dest, cleanedAlt, title)
+
+    def toRaw(t: TextItem): String = t match {
+      case Common(s) => s
+      case Strong(elems) => elems.map(toRaw).mkString("")
+      case Italic(elems) => elems.map(toRaw).mkString("")
+      case Code(s) => s
+      case Image(_, alt, _) => alt
+      case Link(text, _) => text
+    }
+
+    def toDefault(t: TextItem): String = t match {
+      case Common(s) => s
+      case Strong(elems) => "_" + elems.map(toDefault).mkString("") + "_"
+      case Italic(elems) => "*" + elems.map(toDefault).mkString("") + "*"
+      case Code(s) => s
+      case Image(_, alt, _) => alt
+      case Link(text, _) => text
+    }
+
+    val altP = {
+      val inside = P(image | link | italic | strong | code | !"]" ~ AnyTextChar.!).rep(0).map(x => foldChars(x))
+      P("[" ~ inside ~ "]")
+    }
+
+    P("!" ~ altP.rep(min = 1, sep = P(""))).flatMap(alts => {
+
+      val expectedAlts = alts.flatMap(alt => {
+        val default = alt.map(toDefault).mkString("")
+        val raw = alt.map(toRaw).mkString("")
+        Set(default, raw, raw.toUpperCase, raw.toLowerCase).toList
+      })
+      println(expectedAlts)
+
+      val expectedEnds = expectedAlts.map(colonEnd).reduceLeft(_ | _)
+
+      (defaultEnd | expectedEnds).map({case (dest, title) => {
+        val raw = alts.head.map(toRaw).mkString
+        Image(dest, raw, title)
       }})
     })
-    //P("!" ~ wrappedBy("[", "]") ~ attrs).map({ case (alt, (dest, title)) =>
-    //  P("!" ~ wrappedBy("[", "]") ~ attrs).map({ case (alt, (dest, title)) =>
-//      val cleaned = dest.split(" ").map(p => p.replaceAll("^_", "").replaceAll("_$", "").replaceAll("^\\*", "").replaceAll("\\*$", "")).mkString("")
-//      Image(cleaned, alt, title)
-//    })
   }
 
   val strong = {

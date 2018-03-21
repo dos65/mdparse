@@ -2,7 +2,6 @@ package mdparse
 
 import mdparse.md.MdItem
 
-
 object md {
 
   sealed trait MdItem extends Product with Serializable
@@ -27,6 +26,7 @@ object md {
   final case class Strong(elems: Seq[TextItem]) extends TextItem
   final case class Italic(elems: Seq[TextItem]) extends TextItem
   final case class Code(s: String) extends TextItem
+  final case class FencedCode(lang: Option[String], data: String) extends TextItem
 
   final case class ListItem(items: Seq[MdItem]) extends MdItem
 
@@ -36,8 +36,9 @@ object md {
 
   final case class RawHtml(node: HtmlTag2) extends MdItem
 
-  final case class FencedCode(lang: Option[String], data: String) extends MdItem
 }
+
+case class UnresolvedMarkdown(items: Seq[MdItem])
 
 case class Markdown(items: Seq[MdItem]) {
 

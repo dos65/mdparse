@@ -19,10 +19,10 @@ class CommonMarkSpec extends FunSpec with Matchers with SpecsReader {
   )
 
   specTests.groupBy(_.section)
-    .filter(x => enabledSections.contains(x._1))
+    //.filter(x => enabledSections.contains(x._1))
     .foreach({case (section, tests) => {
 
-      describe("Common mars section:" + section) {
+      describe("Common marks section:" + section) {
         tests.zipWithIndex.foreach({case (t, index) => {
           it(s"num: $index example: ${t.example}: ${t.markdown}") { test(t) }
         }})

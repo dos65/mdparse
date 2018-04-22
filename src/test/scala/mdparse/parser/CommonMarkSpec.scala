@@ -15,11 +15,12 @@ case class SpecTest(
 class CommonMarkSpec extends FunSpec with Matchers with SpecsReader {
 
   val enabledSections = Seq(
-    "Images"
+    "Tabs"//,
+//    "Images"
   )
 
   specTests.groupBy(_.section)
-    //.filter(x => enabledSections.contains(x._1))
+   .filter(x => enabledSections.contains(x._1))
     .foreach({case (section, tests) => {
 
       describe("Common marks section:" + section) {
@@ -40,18 +41,16 @@ class CommonMarkSpec extends FunSpec with Matchers with SpecsReader {
     def normalize(s: String): String = unescape(s.replaceAll("\n", ""))
 
     val in = specTest.markdown
-    MdParser.markdown.parse(in) match {
-      case Parsed.Success(r, _) =>
-        val rendered = HtmlRender.Compact.render(r.toHtml)
+    MdParser.parse(in) match {
+      case Right(md) =>
+        val rendered = HtmlRender.Compact.render(md.toHtml)
         val out = normalize(rendered)
         val expected = normalize(specTest.html)
         if (out != expected) {
           fail(s"Failed: in:\n $in \n out: $out \n exp: $expected")
         }
-//        if (normalize(out))
-//        parserOut shouldBe specTest.html
-      case f:Parsed.Failure =>
-        fail(s"Couldn't parse: $in . reason: ${f.msg}")
+      case Left(msg) =>
+        fail(s"Couldn't parse: $in . reason: $msg")
     }
   }
 

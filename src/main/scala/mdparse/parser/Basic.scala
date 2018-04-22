@@ -1,10 +1,8 @@
 package mdparse.parser
 
 import fastparse.all._
-import fastparse.utils.ReprOps
 
 import scala.collection.mutable
-
 
 trait Basic {
 

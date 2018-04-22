@@ -1,8 +1,8 @@
 package mdparse.parser
 
 import fastparse.all._
+import mdparse.MdItem.RawHtml
 import mdparse.{HtmlTag2, HtmlTags2}
-import mdparse.md._
 
 trait HtmlParser extends Basic {
 

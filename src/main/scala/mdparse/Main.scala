@@ -7,11 +7,11 @@ object Main extends App {
 
   val in = args(0)
 
-  MdParser.markdown.parse(in) match {
-    case Parsed.Success(data, _) =>
+  MdParser.parse(in) match {
+    case Right(data) =>
       println(data)
-    case f: Parsed.Failure =>
-      println("Error occurred during parsing:" + f.msg)
+    case Left(err) =>
+      println(s"Error occurred during parsing:$err")
       sys.exit(1)
   }
 }

@@ -1,23 +1,23 @@
 package mdparse
 
-import mdparse.md._
+import mdparse.MdItem._
 import org.scalatest.{FunSpec, Matchers}
 
 class MarkdownSpec extends FunSpec with Matchers {
 
   it("should return html") {
     val md = Markdown(Seq(
-      Header(1, "Header1"),
+      Header(1, Seq(Common("Header1"))),
       ThBreak,
-      Header(4, "Header2"),
-      Paragraph.withItems(
+      Header(4, Seq(Common("Header2"))),
+      Paragraph(Seq(
         Common("paragpraph <sfaa dsfdsf"),
         Common("second"),
-        Common("third "), Link("asdsad")
-      ),
-      Paragraph.withItems(
+        Common("third "), Link("asdsad", "asdsad", None)
+      )),
+      Paragraph(Seq(
         Common("ssssssssssss")
-      ),
+      )),
       UnorderedList(Seq(
         ListItem(Seq(Common("item1"))),
         ListItem(Seq(Common("item 2"))))

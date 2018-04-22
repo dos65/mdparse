@@ -1,8 +1,8 @@
 package mdparse.parser
 
 import fastparse.all._
-import mdparse.Markdown
-import mdparse.md._
+import mdparse._
+import mdparse.MdItem._
 
 trait MdParser extends Basic {
 
@@ -12,7 +12,9 @@ trait MdParser extends Basic {
     val readLine = P(CharsWhile(c => c != '\n' && c != '\r').!)
     val text = P(!ln ~ readLine.! ~/ lnOrEnd).map(_.trim)
 
-    P( sharps ~ space ~/ text ).map({case (level, text) => Header(level, text)})
+    //TODO
+    //P( sharps ~ space ~/ text ).map({case (level, text) => Header(level, text)})
+    P( sharps ~ space ~/ text ).map({case (level, text) => Header(level, Seq(Common(text)))})
   }
 
   val thBreak = {
@@ -42,7 +44,7 @@ trait MdParser extends Basic {
 
 
   val list = {
-    type Inner = Either[MdList, Seq[TextItem]]
+    type Inner = Either[MdList, Seq[SpanItem]]
 
     val prefixes = Seq(
       ListPrefix(P("*"), UnorderedList.apply),
@@ -52,7 +54,7 @@ trait MdParser extends Basic {
     )
 
     def listItem(
-      head: Seq[TextItem],
+      head: Seq[SpanItem],
       nextPref: ListPrefix,
       level: Int): P[ListItem] = {
 
@@ -101,17 +103,46 @@ trait MdParser extends Basic {
           .map({case (lang, code) => FencedCode(lang, code.mkString(""))})
       })
     }
-    forSymbol('`') | forSymbol('~')
+
+    val forTab = P(tab ~ (CharsWhile(c => c != '\n' && c != '\r') | !ln ~ AnyChar).!.rep(1) ~ (ln | End)).rep(1)
+      .map(lines => FencedCode(None, lines.flatten.mkString("\n")))
+
+    forTab | forSymbol('`') | forSymbol('~')
   }
 
-  val markdown: P[Markdown] = {
-    val items = header | thBreak | HtmlParser.html | fencedCode | blankLine | list | paragraph
+  val resolveReference: P[Reference] = {
+    P(wrappedBy("[", "]") ~ ":" ~ space.rep(0) ~ Word.! ~ (space.rep(0) ~ "\"" ~ (!"\"" ~ AnyTextChar).rep(1).! ~ "\"").? ~ (ln | End))
+      .map({case (ref, dest, title) => Reference(ref, dest, title)})
+  }
+
+  val rawMarkdown: P[RawMarkdown] = {
+    type Block = Either[Reference, BlockItem]
+    val items: P[Block] =
+      fencedCode.map(f => Right(f)) |
+      header.map(h => Right(h)) |
+      thBreak.map(b => Right(b))|
+      resolveReference.map(r => Left(r)) |
+      HtmlParser.html.map(h => Right(h)) |
+      list.map(l => Right(l)) |
+      paragraph.map(p => Right(p))
+
     P(items.rep ~ End).map(all => {
-      val mdItems = all.collect({case b: MdItem => b})
-      Markdown(mdItems)
+      val (blocks, refs) = all.foldLeft((Vector.empty[BlockItem], Vector.empty[Reference])) {
+        case ((blocks, refs), Right(block)) => (blocks :+ block, refs)
+        case ((blocks, refs), Left(ref)) => (blocks, refs :+ ref)
+      }
+      RawMarkdown(blocks, refs)
     })
+  }
+}
+
+object MdParser extends MdParser {
+
+  def parse(s: String): Either[String, Markdown] = {
+    rawMarkdown.parse(s) match {
+      case Parsed.Success(r, _) => Right(r.resolve())
+      case f: Parsed.Failure => Left(f.msg)
+    }
   }
 
 }
-
-object MdParser extends MdParser

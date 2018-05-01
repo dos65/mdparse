@@ -20,10 +20,6 @@ trait TextItemsParser extends Basic {
     P(short | long)
   }
 
-//  val maybeLink: P[MaybeLink] = {
-//    val inside = P(image | link | italic | strong | code | !"]" ~ AnyTextChar.!).rep(0).map(x => foldChars(x))
-//    P("[" ~ inside ~ "]").rep(min = 1, sep = P("")).map(data => MaybeLink(data))
-//  }
 
   val image: P[Image] = {
     val title = P("\"" ~ (!"\"" ~ AnyTextChar).rep(1).! ~ "\"")
@@ -67,14 +63,23 @@ trait TextItemsParser extends Basic {
     })
   }
 
+  val handle: P[Common] = {
+    val inside = P(image | link | italic | strong | code | !"]" ~ AnyTextChar.!).rep(0).map(x => foldChars(x))
+    P("!".!.? ~ P("[" ~ inside ~ "]").rep(min = 1, sep = P(""))).map({case (isImage, data) => {
+      val t = if (isImage.isDefined) MaybeImage else MaybeLink
+      val handle = ResolveHandles(data, t)
+      Common(handle)
+    }})
+  }
+
   val code = wrappedBy("`").map(s => Code(s))
 
   val text: P[Seq[SpanItem]] = {
-    P(image| link | italic | strong | code | AnyTextChar.!).rep(1).map(foldChars)
+    P(image| link | handle | italic | strong | code | AnyTextChar.!).rep(1).map(foldChars)
   }
 
   val textTrimmed: P[Seq[SpanItem]] = {
-    P(" ".rep ~ image | link | italic | strong | code | AnyTextChar.!).rep(1)
+    P(" ".rep ~ image | link | handle | italic | strong | code | AnyTextChar.!).rep(1)
       .map(raw => {
         val items = foldChars(raw)
         if (items.size == 1) {

@@ -1,5 +1,7 @@
 package mdparse.parser
 
+import java.io.{PrintWriter, StringWriter}
+
 import mdparse.HtmlRender
 import org.scalatest.{FunSpec, Matchers}
 
@@ -15,14 +17,12 @@ case class SpecTest(
 class CommonMarkSpec extends FunSpec with Matchers with SpecsReader {
 
   val enabledSections = Seq(
-    "Tabs"//,
-//    "Images"
+    "Tabs",
+    "Images"
   )
 
   specTests.groupBy(_.section)
-   .filter(x => enabledSections.contains(x._1))
     .foreach({case (section, tests) => {
-
       describe("Common marks section:" + section) {
         tests.zipWithIndex.foreach({case (t, index) => {
           it(s"num: $index example: ${t.example}: ${t.markdown}") { test(t) }
@@ -41,7 +41,16 @@ class CommonMarkSpec extends FunSpec with Matchers with SpecsReader {
     def normalize(s: String): String = unescape(s.replaceAll("\n", ""))
 
     val in = specTest.markdown
-    MdParser.parse(in) match {
+    val parsed = try {
+      MdParser.parse(in)
+    } catch {
+      case e: Throwable =>
+        val sw = new StringWriter()
+        e.printStackTrace(new PrintWriter(sw))
+        Left(s"Parse fatal error, ${e.getClass} ${e.getMessage} \n ${sw}")
+    }
+
+    parsed match {
       case Right(md) =>
         val rendered = HtmlRender.Compact.render(md.toHtml)
         val out = normalize(rendered)

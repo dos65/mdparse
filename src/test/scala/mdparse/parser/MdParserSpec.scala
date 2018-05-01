@@ -1,10 +1,39 @@
-//package mdparse.parser
-//
-//import fastparse.all._
-//import mdparse._
-//import mdparse.md._
-//import org.scalatest.matchers.{MatchResult, Matcher}
-//import org.scalatest.{FunSpec, Matchers}
+package mdparse.parser
+
+import fastparse.all._
+import mdparse._
+import org.scalatest.matchers.{MatchResult, Matcher}
+import org.scalatest.{FunSpec, Matchers}
+
+class QUickTests extends FunSpec with Matchers with Basic{
+
+  describe("list") {
+    val in = "- one\n\n  two\n"
+    val x = P(space.rep(exactly = 2) ~ TextItemsParser.textTrimmed ~/ lnOrEnd)
+    val stop = MdParser.thBreak | blankLine.rep(2)
+    val y = P(!stop ~ x).rep(0)
+    println(y.parse("\n  two\n"))
+    println(MdParser.list.parse(in))
+  }
+
+  describe("???") {
+
+//    val in = "<script>\nfoo\n</script>1. *bar*\n"
+//    println(MdParser.rawMarkdown.parse(in))
+
+    import MdItem._
+
+    val x = OrderedList(Seq(
+      ListItem(
+        Seq(
+          Italic(Seq(Common("bar")))
+        )
+      )
+    ))
+
+    RawMarkdown(Seq(x), Seq.empty).resolve()
+  }
+}
 //
 //class MdParserSpec extends FunSpec with Matchers {
 //

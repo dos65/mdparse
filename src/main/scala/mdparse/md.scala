@@ -37,6 +37,14 @@ object MdItem {
     def cleanedHandle(part: Seq[SpanItem]) = partHandle(part)(cleanedItem)
     def defaultHandle(part: Seq[SpanItem]) = partHandle(part)(defaultItem)
 
+    def fallbackString(): String = {
+      val fallback = handles.map(h => defaultHandle(h)).map(s => "[" + s + "]").mkString("")
+      `type` match {
+        case MaybeLink => fallback
+        case MaybeImage => "!" + fallback
+      }
+    }
+
     def possibleHandles: Set[String] = {
       handles.flatMap(part => {
         val default = defaultHandle(part)
@@ -50,11 +58,12 @@ object MdItem {
     def value: String = s
     def canResolve: Boolean = resolveAs.nonEmpty
     def resolve: Option[ResolveHandles] = resolveAs
+    override def toString: String = s
   }
   object Common {
     def unapply(arg: Common): Option[String] = Some(arg.value)
     def apply(s: String): Common = new Common(s, None)
-    def apply(s: String, resolveAs: ResolveHandles): Common = new Common(s, Option(resolveAs))
+    def apply(resolveAs: ResolveHandles): Common = new Common(resolveAs.fallbackString(), Some(resolveAs))
   }
 
   final case class Strong(items: Seq[SpanItem]) extends SpanItem
@@ -66,7 +75,7 @@ object MdItem {
   case object ThBreak extends BlockItem
   final case class Header(level: Int, text: Seq[SpanItem]) extends BlockItem
   final case class Paragraph(items: Seq[SpanItem]) extends BlockItem
-  final case class ListItem(items: Seq[MdItem]) extends BlockItem
+  final case class ListItem(items: Seq[MdItem]) extends MdItem
   sealed trait MdList extends BlockItem
   final case class UnorderedList(items: Seq[ListItem]) extends MdList
   final case class OrderedList(items: Seq[ListItem]) extends MdList
@@ -106,9 +115,10 @@ case class RawMarkdown(items: Seq[BlockItem], refs: Seq[Reference]) {
     }
 
     def resolveListItem(l: ListItem): ListItem = {
-      val x = items.map({
+      val x = l.items.map({
         case s: SpanItem => resolveSpan(s)
         case b: BlockItem => resolveBlock(b)
+        case li: ListItem => resolveListItem(li)
       })
       ListItem(x)
     }
@@ -119,7 +129,7 @@ case class RawMarkdown(items: Seq[BlockItem], refs: Seq[Reference]) {
       case f: FencedCode => f
       case Header(l, text) => Header(l, text.map(resolveSpan))
       case Paragraph(items) => Paragraph(items.map(resolveSpan))
-      case li: ListItem => resolveListItem(li)
+      //case li: ListItem => resolveListItem(li)
       case UnorderedList(items) => UnorderedList(items.map(resolveListItem))
       case OrderedList(items) => OrderedList(items.map(resolveListItem))
     }

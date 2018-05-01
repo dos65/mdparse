@@ -55,7 +55,6 @@ trait MdParser extends Basic {
 
     def listItem(
       head: Seq[SpanItem],
-      nextPref: ListPrefix,
       level: Int): P[ListItem] = {
 
       val maybePrev = for {
@@ -68,21 +67,23 @@ trait MdParser extends Basic {
 
       val inner: P[Inner] = mkLists(level + 1).map(l => Left(l))
 
+      val empty: P[Inner] = blankLine.map(_ => Right(Seq.empty))
       val line: P[Inner] = P(TextItemsParser.textTrimmed ~/ lnOrEnd).map(l => Right(l))
 
-      P(!stop ~ (inner | line)).rep(0).map(body => {
+      P(!stop ~ (inner | line | empty)).rep(0).map(body => {
         val cleaned = body.foldLeft(List.empty[MdItem]) {
           case (acc, Left(list)) => acc :+ list
           case (acc, Right(items)) => acc ++ items
         }
+
         ListItem(head ++ cleaned)
       })
     }
 
     def mkList(prefix: ListPrefix, level: Int): P[MdList] = {
       val prefixP = prefix.parser(level)
-      val headParser = P(prefixP ~ space ~ TextItemsParser.textTrimmed ~/ lnOrEnd)
-      headParser.flatMap(head => listItem(head, prefix, level))
+      val headParser = P(prefixP ~ space.rep(min = 1).! ~ TextItemsParser.textTrimmed ~/ lnOrEnd)
+      headParser.flatMap({ case(spaces, head) => listItem(head, level) })
         .rep(1)
         .map(items => prefix.f(items))
     }
@@ -103,11 +104,14 @@ trait MdParser extends Basic {
           .map({case (lang, code) => FencedCode(lang, code.mkString(""))})
       })
     }
+    val toLineEnd = P(CharsWhile(c => c != '\n' && c != '\r') | !ln ~ AnyChar).!.rep(1).map(_.mkString(""))
 
-    val forTab = P(tab ~ (CharsWhile(c => c != '\n' && c != '\r') | !ln ~ AnyChar).!.rep(1) ~ (ln | End)).rep(1)
+    val forTab = P(space.rep(0) ~ tab ~ toLineEnd ~ (ln | End)).rep(1).map(lines => FencedCode(None, lines.mkString("\n")))
+
+    val forSpace = P(space.rep(exactly = 4) ~ toLineEnd ~ (ln | End)).rep(1)
       .map(lines => FencedCode(None, lines.flatten.mkString("\n")))
 
-    forTab | forSymbol('`') | forSymbol('~')
+    forTab | forSpace | forSymbol('`') | forSymbol('~')
   }
 
   val resolveReference: P[Reference] = {
@@ -115,21 +119,28 @@ trait MdParser extends Basic {
       .map({case (ref, dest, title) => Reference(ref, dest, title)})
   }
 
+  sealed trait ParsedItem
+  case object BlankLine extends ParsedItem
+  final case class Ref(r: Reference) extends ParsedItem
+  final case class Item(i: BlockItem) extends ParsedItem
+
   val rawMarkdown: P[RawMarkdown] = {
-    type Block = Either[Reference, BlockItem]
-    val items: P[Block] =
-      fencedCode.map(f => Right(f)) |
-      header.map(h => Right(h)) |
-      thBreak.map(b => Right(b))|
-      resolveReference.map(r => Left(r)) |
-      HtmlParser.html.map(h => Right(h)) |
-      list.map(l => Right(l)) |
-      paragraph.map(p => Right(p))
+    val items: P[ParsedItem] =
+      fencedCode.map(f => Item(f)) |
+      header.map(h => Item(h)) |
+      thBreak.map(b => Item(b))|
+      resolveReference.map(r => Ref(r)) |
+      HtmlParser.html.map(h => Item(h)) |
+      list.map(l => Item(l)) |
+      paragraph.map(p => Item(p)) |
+      blankLine.map(_ => BlankLine)
+
 
     P(items.rep ~ End).map(all => {
       val (blocks, refs) = all.foldLeft((Vector.empty[BlockItem], Vector.empty[Reference])) {
-        case ((blocks, refs), Right(block)) => (blocks :+ block, refs)
-        case ((blocks, refs), Left(ref)) => (blocks, refs :+ ref)
+        case ((blocks, refs), Item(block)) => (blocks :+ block, refs)
+        case ((blocks, refs), Ref(ref)) => (blocks, refs :+ ref)
+        case ((blocks, refs), BlankLine) => (blocks, refs)
       }
       RawMarkdown(blocks, refs)
     })

@@ -45,6 +45,8 @@ object MdItem {
       }
     }
 
+    def cleanedHead(): String = cleanedHandle(handles.head)
+
     def possibleHandles: Set[String] = {
       handles.flatMap(part => {
         val default = defaultHandle(part)
@@ -95,8 +97,8 @@ case class RawMarkdown(items: Seq[BlockItem], refs: Seq[Reference]) {
     def resolveCommon(value: String, handles: ResolveHandles): SpanItem = {
       handles.possibleHandles.flatMap(references.get).headOption match {
         case Some(ref) => handles.`type` match {
-          case MaybeImage => Image(ref.destination, ref.ref, ref.title)
-          case MaybeLink => Link(ref.ref, ref.destination, ref.title)
+          case MaybeImage => Image(ref.destination, handles.cleanedHead(), ref.title)
+          case MaybeLink => Link(handles.cleanedHead(), ref.destination, ref.title)
         }
         case None => Common(value)
       }
@@ -129,7 +131,6 @@ case class RawMarkdown(items: Seq[BlockItem], refs: Seq[Reference]) {
       case f: FencedCode => f
       case Header(l, text) => Header(l, text.map(resolveSpan))
       case Paragraph(items) => Paragraph(items.map(resolveSpan))
-      //case li: ListItem => resolveListItem(li)
       case UnorderedList(items) => UnorderedList(items.map(resolveListItem))
       case OrderedList(items) => OrderedList(items.map(resolveListItem))
     }

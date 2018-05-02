@@ -4,6 +4,8 @@ import fastparse.all._
 import mdparse._
 import mdparse.MdItem._
 
+import scala.annotation.switch
+
 trait MdParser extends Basic {
 
   val header = {
@@ -44,7 +46,8 @@ trait MdParser extends Basic {
 
 
   val list = {
-    type Inner = Either[MdList, Seq[SpanItem]]
+    type Line = Seq[SpanItem]
+    type Inner = Either[MdList, Line]
 
     val prefixes = Seq(
       ListPrefix(P("*"), UnorderedList.apply),
@@ -71,18 +74,28 @@ trait MdParser extends Basic {
       val line: P[Inner] = P(TextItemsParser.textTrimmed ~/ lnOrEnd).map(l => Right(l))
 
       P(!stop ~ (inner | line | empty)).rep(0).map(body => {
-        val cleaned = body.foldLeft(List.empty[MdItem]) {
-          case (acc, Left(list)) => acc :+ list
-          case (acc, Right(items)) => acc ++ items
+
+        val (lines, inners) = body.foldLeft((Vector.apply(head), Vector.empty[MdList])) {
+          case ((lines, inners), Left(list)) => (lines, inners :+ list)
+          case ((lines, inners), Right(line)) => (lines :+ line, inners)
         }
 
-        ListItem(head ++ cleaned)
+        @switch
+        val items = lines.length match {
+          case 0 => inners
+          case 1 => lines.flatten ++ inners
+          case _ => lines.filter(_.nonEmpty).map(Paragraph) ++ inners
+        }
+
+        ListItem(items)
       })
     }
 
     def mkList(prefix: ListPrefix, level: Int): P[MdList] = {
       val prefixP = prefix.parser(level)
-      val headParser = P(prefixP ~ space.rep(min = 1).! ~ TextItemsParser.textTrimmed ~/ lnOrEnd)
+      // TODO?
+      val prepre = if (level == 0 ) P(space.rep()) else P("")
+      val headParser = P(prepre ~ prefixP ~ space.rep(min = 1).! ~ TextItemsParser.textTrimmed ~/ lnOrEnd)
       headParser.flatMap({ case(spaces, head) => listItem(head, level) })
         .rep(1)
         .map(items => prefix.f(items))

@@ -28,8 +28,8 @@ trait Basic {
 
   def wrappedBy(s: String): P[String] = wrappedBy(s, s)
 
-  def wrappedBy(start: String, end: String): P[String] = {
-    P(start ~ (!end ~ AnyTextChar).rep(1).! ~ end)
+  def wrappedBy(start: String, end: String, min: Int = 1): P[String] = {
+    P(start ~ (!end ~ AnyTextChar).rep(min).! ~ end)
   }
 
   def wrappedBy[A](start: String, end: String, p: P[A]): P[A] = {

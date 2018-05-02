@@ -13,7 +13,7 @@ trait TextItemsParser extends Basic {
   val link: P[Link] = {
     val short = wrappedBy("<", ">").map(l => Link(l, l, None))
     val long = {
-      val title = wrappedBy("[", "]")
+      val title = wrappedBy("[", "]", 0)
       val dest = wrappedBy("(", ")")
       P(title ~ dest).map({case (t, d) => Link(t, d, None)})
     }
@@ -26,14 +26,9 @@ trait TextItemsParser extends Basic {
     val dest = P("<".? ~ (!(">" | ")" | WordBreakers) ~ AnyChar).rep(1).! ~ ">".?)
     val end = P("(" ~ dest ~ space.rep(0) ~ title.? ~ space.rep(0) ~ ")")
 
-    val alt = wrappedBy("![", "]")
+    val alt = wrappedBy("![", "]", 0)
     P(alt ~ end).map({case (alt, (dest, title)) => Image(dest, alt, title)})
   }
-
-//  val maybeImage: P[MaybeImage] = {
-//    val inside = P(image | link | italic | strong | code | !"]" ~ AnyTextChar.!).rep(0).map(x => foldChars(x))
-//    P("[" ~ inside ~ "]").rep(min = 1, sep = P("")).map(data => MaybeImage(data))
-//  }
 
   val strong = {
     val italic = {

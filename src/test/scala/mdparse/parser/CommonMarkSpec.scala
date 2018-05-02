@@ -17,11 +17,12 @@ case class SpecTest(
 class CommonMarkSpec extends FunSpec with Matchers with SpecsReader {
 
   val enabledSections = Seq(
-    "Tabs",
-    "Images"
+    "Tabs"//,
+  //  "Images"
   )
 
   specTests.groupBy(_.section)
+    //.filter(s => enabledSections.contains(s._1))
     .foreach({case (section, tests) => {
       describe("Common marks section:" + section) {
         tests.zipWithIndex.foreach({case (t, index) => {

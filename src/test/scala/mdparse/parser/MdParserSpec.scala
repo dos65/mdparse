@@ -9,6 +9,7 @@ class QUickTests extends FunSpec with Matchers with Basic{
 
   it("sadad") {
     println(MdParser.parse("# foo ##################################\n##### foo ##\n"))
+    println(MdParser.parse("> A block quote\n> asdsad"))
   }
 
 }

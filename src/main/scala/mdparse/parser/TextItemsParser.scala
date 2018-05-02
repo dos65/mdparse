@@ -73,6 +73,7 @@ trait TextItemsParser extends Basic {
     P(image| link | handle | italic | strong | code | AnyTextChar.!).rep(1).map(foldChars)
   }
 
+  //TODO - remove?
   val textTrimmed: P[Seq[SpanItem]] = {
     P(" ".rep ~ image | link | handle | italic | strong | code | AnyTextChar.!).rep(1)
       .map(raw => {

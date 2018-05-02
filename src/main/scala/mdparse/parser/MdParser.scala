@@ -35,7 +35,29 @@ trait MdParser extends Basic {
   }
 
   val paragraph = {
-    P(TextItemsParser.text ~ lnOrEnd).rep(1).map(items => Paragraph(items.flatten))
+    val stop = blankLine.rep(2)
+    P(!stop ~ line).rep(1).filter(_.nonEmpty).map(items => Paragraph(items.flatten))
+  }
+
+  val blockquote = {
+    val internalParser = P(
+      fencedCode |
+      header |
+      thBreak |
+      //resolveReference.map(r => Ref(r)) |
+      //HtmlParser.html.map(h => Item(h)) |
+      list |
+      paragraph //|
+      //blankLine
+    ).rep(1)
+
+    P(">" ~ space ~ AnyTextChar.rep().! ~ lnOrEnd).rep(1).map(lines => {
+      val reMd = lines.mkString("\n")
+      internalParser.parse(reMd) match {
+        case f:Parsed.Failure => throw new RuntimeException(s"Can't parse blockquote: ${f.msg}")
+        case Parsed.Success(items,_) => Blockquote(items)
+      }
+    })
   }
 
   case class ListPrefix(sym: P0, f: Seq[ListItem] => MdList) {
@@ -143,6 +165,7 @@ trait MdParser extends Basic {
 
   val rawMarkdown: P[RawMarkdown] = {
     val items: P[ParsedItem] =
+      blockquote.map(b => Item(b)) |
       fencedCode.map(f => Item(f)) |
       header.map(h => Item(h)) |
       thBreak.map(b => Item(b))|

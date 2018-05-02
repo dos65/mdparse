@@ -83,6 +83,7 @@ object MdItem {
   final case class OrderedList(items: Seq[ListItem]) extends MdList
   final case class RawHtml(node: HtmlTag2) extends BlockItem
   final case class FencedCode(lang: Option[String], data: String) extends BlockItem
+  final case class Blockquote(items: Seq[BlockItem]) extends BlockItem
 
 }
 
@@ -133,6 +134,7 @@ case class RawMarkdown(items: Seq[BlockItem], refs: Seq[Reference]) {
       case Paragraph(items) => Paragraph(items.map(resolveSpan))
       case UnorderedList(items) => UnorderedList(items.map(resolveListItem))
       case OrderedList(items) => OrderedList(items.map(resolveListItem))
+      case Blockquote(items) => Blockquote(items.map(resolveBlock))
     }
 
     val resolved = items.map(resolveBlock)
@@ -163,6 +165,7 @@ case class Markdown(items: Seq[BlockItem]) {
       case RawHtml(node) => node
       case Code(s) => code.inner(s)
       case FencedCode(lang, data) => pre.body(code(data, lang))
+      case Blockquote(elems) => blockquote.body(elems.map(toHtml))
       case x => throw new RuntimeException(s"Unexpected Element: $x: $items")
     }
     Html(items.map(toHtml))

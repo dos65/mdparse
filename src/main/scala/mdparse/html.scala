@@ -63,6 +63,7 @@ object HtmlTags2 {
 
   val div = inst("div")
   val br = HtmlTag2("br", Seq.empty, Seq.empty)
+  val blockquote = inst("blockquote")
 
   def innerText(s: String): InnerText = InnerText(s)
 

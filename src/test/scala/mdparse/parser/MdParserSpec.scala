@@ -8,9 +8,7 @@ import org.scalatest.{FunSpec, Matchers}
 class QUickTests extends FunSpec with Matchers with Basic{
 
   it("sadad") {
-    val in = "  - foo\n\n\tbar\n"
-    println(MdParser.list.parse(in))
-    println(MdParser.parse(in))
+    println(MdParser.parse("# foo ##################################\n##### foo ##\n"))
   }
 
 }

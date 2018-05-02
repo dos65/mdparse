@@ -36,7 +36,7 @@ object HtmlTags2 {
   def tag(name: String): HtmlTag2 = HtmlTag2(name, Seq.empty, Seq.empty)
 
   def header(level: Int) = inst("h" + level.toString)
-  val th = inst("th").empty
+  val hr = inst("hr").empty
   val p = inst("p")
   val a = { new TagInst("a") {
     def apply(dest: String, text: String): HtmlTag2 =

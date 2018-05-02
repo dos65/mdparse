@@ -60,7 +60,7 @@ object MdItem {
     def value: String = s
     def canResolve: Boolean = resolveAs.nonEmpty
     def resolve: Option[ResolveHandles] = resolveAs
-    override def toString: String = s
+    override def toString: String = s"Common($s)"
   }
   object Common {
     def unapply(arg: Common): Option[String] = Some(arg.value)
@@ -149,7 +149,7 @@ case class Markdown(items: Seq[BlockItem]) {
 
     def toHtml(item: MdItem): HtmlUnit2 = item match {
       case h: Header => header(h.level).body(h.text.map(toHtml))
-      case ThBreak => th
+      case ThBreak => hr
       case Paragraph(elems) => p.body(elems.map(toHtml))
       // TODO
       case Link(text, dest, title) => a(dest, text)

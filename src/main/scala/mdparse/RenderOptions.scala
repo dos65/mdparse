@@ -35,12 +35,12 @@ object HtmlRender {
 
       def mkAttrs(attrs: Seq[(String, String)]): String = {
         if (attrs.isEmpty) ""
-        else attrs.map({case (k,v) =>  k + "=\"" + v + "\""}).mkString(" ", " ", " ")
+        else attrs.map({case (k,v) =>  k + "=\"" + v + "\""}).mkString(" ", " ", "")
       }
 
       unit match {
         case InnerText(text) => text
-        case HtmlTag2(name, attrs, _) if isVoid(name) => s"<$name${mkAttrs(attrs)}/>"
+        case HtmlTag2(name, attrs, _) if isVoid(name) => s"<$name${mkAttrs(attrs)} />"
         case HtmlTag2(name, attrs, body) =>
           val rBody = body.map(render).mkString(sep)
           s"<$name${mkAttrs(attrs)}>$rBody</$name>"

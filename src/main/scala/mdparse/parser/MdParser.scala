@@ -8,15 +8,19 @@ import scala.annotation.switch
 
 trait MdParser extends Basic {
 
+  val line = P(TextItemsParser.textTrimmed ~/ lnOrEnd)
+
   val header = {
     val sharps = P ( "#".rep(min = 1, max = 6).! ).map(_.length)
-
-    val readLine = P(CharsWhile(c => c != '\n' && c != '\r').!)
-    val text = P(!ln ~ readLine.! ~/ lnOrEnd).map(_.trim)
-
-    //TODO
-    //P( sharps ~ space ~/ text ).map({case (level, text) => Header(level, text)})
-    P( sharps ~ space ~/ text ).map({case (level, text) => Header(level, Seq(Common(text)))})
+    P( sharps ~ (space | tab) ~/ line).map({case (level, text) =>
+      val cleaned = text.last match {
+        case Common(s) =>
+          val cleanup = s.replaceAll("\\s+$", "").replaceAll("#+$", "").replaceAll("\\s+$", "")
+          text.init :+ Common(cleanup)
+        case _ => text
+      }
+      Header(level, cleaned)
+    })
   }
 
   val thBreak = {
